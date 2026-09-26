@@ -85,9 +85,10 @@ export function Modal({
       />
 
       <div
-        className={`relative z-10 w-full ${sizeClass} overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-xl`}
+        className={`relative z-10 flex max-h-[90vh] w-full ${sizeClass} flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-white shadow-xl`}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
+        {/* Cabeçalho */}
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4 sm:px-6">
           <div className="min-w-0">
             <h2
               id="modal-title"
@@ -116,7 +117,8 @@ export function Modal({
           </button>
         </div>
 
-        <div className="p-5 sm:p-6">
+        {/* Conteúdo com rolagem */}
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 sm:p-6">
           {children}
         </div>
       </div>

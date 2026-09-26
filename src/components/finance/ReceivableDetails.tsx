@@ -2,12 +2,13 @@ import {
   ArrowDownToLine,
   CalendarDays,
   CheckCircle2,
-  CreditCard,
   FileText,
   Loader2,
   Wallet,
   X,
 } from "lucide-react";
+
+import { useEffect, useState } from "react";
 
 import type {
   AccountReceivable,
@@ -24,6 +25,7 @@ interface ReceivableDetailsProps {
   onPay: (
     installment: ReceivableInstallment,
     accountId: string,
+    amount: number,
   ) => void;
   onClose: () => void;
 }
@@ -97,6 +99,122 @@ export function ReceivableDetails({
         installment.status === "partially_paid" ||
         installment.status === "overdue",
     );
+
+  const [payingInstallmentId, setPayingInstallmentId] =
+    useState<string | null>(null);
+
+  const [paymentAmount, setPaymentAmount] =
+    useState("");
+
+  const [paymentAccountId, setPaymentAccountId] =
+    useState("");
+
+  const [paymentError, setPaymentError] =
+    useState("");
+
+  useEffect(() => {
+    if (!payingInstallmentId) {
+      return;
+    }
+
+    const installment = installments.find(
+      (item) => item.id === payingInstallmentId,
+    );
+
+    if (!installment) {
+      return;
+    }
+
+    const remaining = Math.max(
+      installment.amount - installment.paidAmount,
+      0,
+    );
+
+    if (remaining <= 0) {
+      setPayingInstallmentId(null);
+      setPaymentAmount("");
+      setPaymentAccountId("");
+      setPaymentError("");
+      return;
+    }
+
+    setPaymentAmount(remaining.toFixed(2).replace(".", ","));
+
+    setPaymentAccountId(
+      (current) =>
+        current ||
+        accounts.find((account) => account.isActive)?.id ||
+        "",
+    );
+  }, [
+    payingInstallmentId,
+    installments,
+    accounts,
+  ]);
+
+  function openPayment(
+    installment: ReceivableInstallment,
+  ) {
+    const remaining = Math.max(
+      installment.amount - installment.paidAmount,
+      0,
+    );
+
+    setPayingInstallmentId(installment.id);
+    setPaymentError("");
+    setPaymentAmount(
+      remaining.toFixed(2).replace(".", ","),
+    );
+    setPaymentAccountId(
+      accounts.find((account) => account.isActive)?.id ||
+        "",
+    );
+  }
+
+  function cancelPayment() {
+    setPayingInstallmentId(null);
+    setPaymentAmount("");
+    setPaymentAccountId("");
+    setPaymentError("");
+  }
+
+  function confirmPayment(
+    installment: ReceivableInstallment,
+  ) {
+    const normalizedAmount = paymentAmount
+      .replace(/\./g, "")
+      .replace(",", ".")
+      .trim();
+
+    const amount = Number(normalizedAmount);
+    const remaining = Math.max(
+      installment.amount - installment.paidAmount,
+      0,
+    );
+
+    if (!paymentAccountId) {
+      setPaymentError("Selecione a conta financeira.");
+      return;
+    }
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setPaymentError("Informe um valor maior que zero.");
+      return;
+    }
+
+    if (amount > remaining) {
+      setPaymentError("O valor não pode ser maior que o restante da parcela.");
+      return;
+    }
+
+    setPaymentError("");
+
+    onPay(
+      installment,
+      paymentAccountId,
+      amount,
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -337,48 +455,147 @@ export function ReceivableDetails({
                               </div>
 
                               {canPay &&
-                                remaining > 0 && (
+                                remaining > 0 &&
+                                payingInstallmentId !==
+                                  installment.id && (
                                   <button
                                     type="button"
                                     disabled={
                                       isPaying ||
-                                      accounts.length ===
-                                        0
+                                      accounts.length === 0
                                     }
-                                    onClick={() => {
-                                      const account =
-                                        accounts.find(
-                                          (
-                                            item,
-                                          ) =>
-                                            item.isActive,
-                                        );
-
-                                      if (
-                                        account
-                                      ) {
-                                        onPay(
-                                          installment,
-                                          account.id,
-                                        );
-                                      }
-                                    }}
+                                    onClick={() =>
+                                      openPayment(installment)
+                                    }
                                     className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                                   >
-                                    {isPaying ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-
-                                        Recebendo...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <ArrowDownToLine className="h-4 w-4" />
-
-                                        Receber
-                                      </>
-                                    )}
+                                    <ArrowDownToLine className="h-4 w-4" />
+                                    Receber
                                   </button>
+                                )}
+
+                              {canPay &&
+                                remaining > 0 &&
+                                payingInstallmentId ===
+                                  installment.id && (
+                                  <div className="w-full rounded-xl border border-gray-200 bg-gray-50 p-4 sm:min-w-[360px] sm:max-w-md lg:w-[420px]">
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                      <div>
+                                        <label className="text-xs font-medium text-gray-600">
+                                          Valor a receber
+                                        </label>
+
+                                        <input
+                                          type="text"
+                                          inputMode="decimal"
+                                          value={paymentAmount}
+                                          onChange={(event) =>
+                                            setPaymentAmount(
+                                              event.target.value,
+                                            )
+                                          }
+                                          className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+                                          placeholder="0,00"
+                                        />
+                                      </div>
+
+                                      <div>
+                                        <label className="text-xs font-medium text-gray-600">
+                                          Conta financeira
+                                        </label>
+
+                                        <select
+                                          value={paymentAccountId}
+                                          onChange={(event) =>
+                                            setPaymentAccountId(
+                                              event.target.value,
+                                            )
+                                          }
+                                          className="mt-1 h-10 w-full rounded-lg border border-gray-200 bg-white px-3 text-sm text-gray-900 outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-200"
+                                        >
+                                          <option value="">
+                                            Selecione
+                                          </option>
+
+                                          {accounts
+                                            .filter(
+                                              (account) =>
+                                                account.isActive,
+                                            )
+                                            .map((account) => (
+                                              <option
+                                                key={account.id}
+                                                value={account.id}
+                                              >
+                                                {account.name}
+                                              </option>
+                                            ))}
+                                        </select>
+                                      </div>
+                                    </div>
+
+                                    {paymentError && (
+                                      <p className="mt-2 text-xs font-medium text-red-600">
+                                        {paymentError}
+                                      </p>
+                                    )}
+
+                                    <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-gray-500">
+                                      <span>
+                                        Restante após recebimento: {" "}
+                                        <strong className="font-semibold text-gray-900">
+                                          {formatCurrency(
+                                            Math.max(
+                                              remaining -
+                                                (Number(
+                                                  paymentAmount
+                                                    .replace(/\./g, "")
+                                                    .replace(",", "."),
+                                                ) || 0),
+                                              0,
+                                            ),
+                                          )}
+                                        </strong>
+                                      </span>
+
+                                      <span>
+                                        Limite: {formatCurrency(remaining)}
+                                      </span>
+                                    </div>
+
+                                    <div className="mt-4 flex justify-end gap-2">
+                                      <button
+                                        type="button"
+                                        disabled={isPaying}
+                                        onClick={cancelPayment}
+                                        className="inline-flex h-10 items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-sm font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                      >
+                                        Cancelar
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        disabled={
+                                          isPaying ||
+                                          !paymentAccountId ||
+                                          !paymentAmount.trim()
+                                        }
+                                        onClick={() =>
+                                          confirmPayment(installment)
+                                        }
+                                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                      >
+                                        {isPaying ? (
+                                          <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            Recebendo...
+                                          </>
+                                        ) : (
+                                          "Confirmar recebimento"
+                                        )}
+                                      </button>
+                                    </div>
+                                  </div>
                                 )}
 
                               {installment.status ===
@@ -414,8 +631,8 @@ export function ReceivableDetails({
                     </p>
 
                     <p className="mt-1 text-sm leading-5 text-blue-700">
-                      O recebimento será lançado na
-                      primeira conta financeira ativa.
+                      Ao registrar um recebimento, informe
+                      o valor recebido e a conta financeira.
                     </p>
 
                     {accounts.length === 0 && (

@@ -24,6 +24,7 @@ import {
   getOrCreateDefaultFinanceAccount,
   payPayableInstallment,
   payReceivableInstallment,
+  transferBetweenFinanceAccounts,
   updateFinanceAccount,
 } from "./finance.service";
 
@@ -605,5 +606,31 @@ export function useCashFlowQuery(
     enabled: Boolean(
       startDate && endDate,
     ),
+  });
+}
+
+export function useTransferFinanceAccountMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: transferBetweenFinanceAccounts,
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["finance", "accounts"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["finance", "cash-movements"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["finance", "summary"],
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: ["finance", "cash-flow"],
+      });
+    },
   });
 }

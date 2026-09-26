@@ -152,6 +152,7 @@ export function ProductEdit() {
             sku: product.sku,
             categoryId: product.categoryId,
             price: product.price,
+            costPrice: product.costPrice,
             stock: product.stock,
             minStock: product.minStock,
             status: product.status,

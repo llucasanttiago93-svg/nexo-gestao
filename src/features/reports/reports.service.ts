@@ -25,6 +25,20 @@ interface OrderRow {
   payment_status: string;
 }
 
+interface ReceivableRow {
+  id: string;
+  order_id: string | null;
+  total_amount: number | string;
+  status: string;
+}
+
+interface ReceivableInstallmentRow {
+  receivable_id: string;
+  amount: number | string;
+  paid_amount: number | string;
+  status: string;
+}
+
 interface OrderItemRow {
   order_id: string;
   product_id: string | null;
@@ -96,6 +110,136 @@ async function getOrders(filters: ReportFilters) {
   return (data ?? []) as OrderRow[];
 }
 
+async function getOrderPaymentTotals(orderIds: string[]) {
+  if (orderIds.length === 0) {
+    return new Map<
+      string,
+      { received: number; receivable: number }
+    >();
+  }
+
+  const { data: receivables, error: receivableError } =
+    await supabase
+      .from("accounts_receivable")
+      .select(
+        `
+          id,
+          order_id,
+          total_amount,
+          status
+        `,
+      )
+      .in("order_id", orderIds);
+
+  if (receivableError) {
+    throw receivableError;
+  }
+
+  const rows = (receivables ?? []) as ReceivableRow[];
+
+  if (rows.length === 0) {
+    return new Map<
+      string,
+      { received: number; receivable: number }
+    >();
+  }
+
+  const receivableIds = rows.map(
+    (receivable) => receivable.id,
+  );
+
+  const { data: installments, error: installmentError } =
+    await supabase
+      .from("accounts_receivable_installments")
+      .select(
+        `
+          receivable_id,
+          amount,
+          paid_amount,
+          status
+        `,
+      )
+      .in("receivable_id", receivableIds);
+
+  if (installmentError) {
+    throw installmentError;
+  }
+
+  const installmentRows =
+    (installments ?? []) as ReceivableInstallmentRow[];
+
+  const installmentsByReceivable = new Map<
+    string,
+    ReceivableInstallmentRow[]
+  >();
+
+  for (const installment of installmentRows) {
+    const current =
+      installmentsByReceivable.get(
+        installment.receivable_id,
+      ) ?? [];
+
+    current.push(installment);
+    installmentsByReceivable.set(
+      installment.receivable_id,
+      current,
+    );
+  }
+
+  const totals = new Map<
+    string,
+    { received: number; receivable: number }
+  >();
+
+  for (const receivable of rows) {
+    if (!receivable.order_id) {
+      continue;
+    }
+
+    if (
+      receivable.status === "cancelled" ||
+      receivable.status === "refunded"
+    ) {
+      continue;
+    }
+
+    const installmentRowsForReceivable =
+      installmentsByReceivable.get(receivable.id) ?? [];
+
+    const received = installmentRowsForReceivable.reduce(
+      (total, installment) =>
+        total + toNumber(installment.paid_amount),
+      0,
+    );
+
+    const installmentTotal =
+      installmentRowsForReceivable.length > 0
+        ? installmentRowsForReceivable.reduce(
+            (total, installment) =>
+              total + toNumber(installment.amount),
+            0,
+          )
+        : toNumber(receivable.total_amount);
+
+    const receivableAmount = Math.max(
+      installmentTotal - received,
+      0,
+    );
+
+    const current = totals.get(receivable.order_id) ?? {
+      received: 0,
+      receivable: 0,
+    };
+
+    current.received += received;
+    current.receivable += receivableAmount;
+
+    totals.set(receivable.order_id, current);
+  }
+
+  return totals;
+}
+
 async function getOrderItems(orderIds: string[]) {
   if (orderIds.length === 0) {
     return [] as OrderItemRow[];
@@ -150,23 +294,23 @@ export async function getReportSummary(
     0,
   );
 
-  const received = orders
-    .filter((order) => order.payment_status === "paid")
-    .reduce(
-      (total, order) => total + toNumber(order.total),
-      0,
-    );
+  const paymentTotals = await getOrderPaymentTotals(
+    orders.map((order) => order.id),
+  );
 
-  const receivable = orders
-    .filter(
-      (order) =>
-        order.payment_status !== "paid" &&
-        order.payment_status !== "refunded",
-    )
-    .reduce(
-      (total, order) => total + toNumber(order.total),
-      0,
-    );
+  const received = orders.reduce(
+    (total, order) =>
+      total +
+      (paymentTotals.get(order.id)?.received ?? 0),
+    0,
+  );
+
+  const receivable = orders.reduce(
+    (total, order) =>
+      total +
+      (paymentTotals.get(order.id)?.receivable ?? 0),
+    0,
+  );
 
   const { data: payableData, error: payableError } =
     await supabase
@@ -220,31 +364,33 @@ export async function getRevenueReport(
 ): Promise<RevenueReportPoint[]> {
   const orders = await getOrders(filters);
 
+  const paymentTotals = await getOrderPaymentTotals(
+    orders.map((order) => order.id),
+  );
+
   const grouped = new Map<string, RevenueReportPoint>();
 
-for (const order of orders) {
-  const date = order.created_at.slice(0, 10);
+  for (const order of orders) {
+    const date = order.created_at.slice(0, 10);
 
-  const total = toNumber(order.total);
+    const total = toNumber(order.total);
 
-  const received =
-    order.payment_status === "paid"
-      ? total
-      : 0;
+    const received =
+      paymentTotals.get(order.id)?.received ?? 0;
 
-  const current = grouped.get(date) ?? {
-    date,
-    revenue: 0,
-    received: 0,
-    orders: 0,
-  };
+    const current = grouped.get(date) ?? {
+      date,
+      revenue: 0,
+      received: 0,
+      orders: 0,
+    };
 
-  current.revenue += total;
-  current.received += received;
-  current.orders += 1;
+    current.revenue += total;
+    current.received += received;
+    current.orders += 1;
 
-  grouped.set(date, current);
-}
+    grouped.set(date, current);
+  }
 
   return Array.from(grouped.values()).sort((a, b) =>
     a.date.localeCompare(b.date),
@@ -260,12 +406,14 @@ export async function getCashFlowReport(
       `
         movement_date,
         type,
-        amount
+        amount,
+        transfer_id
       `,
     )
     .gte("movement_date", filters.startDate)
     .lte("movement_date", filters.endDate)
     .eq("status", "completed")
+    .is("transfer_id", null)
     .order("movement_date", { ascending: true });
 
   if (error) {
@@ -325,10 +473,46 @@ export async function getProductSalesReport(
     orders.map((order) => order.id),
   );
 
+  if (items.length === 0) {
+    return [];
+  }
+
+  const productIds = Array.from(
+    new Set(
+      items
+        .map((item) => item.product_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  const { data: products, error } = await supabase
+    .from("products")
+    .select("id, cost_price")
+    .in("id", productIds);
+
+  if (error) {
+    throw error;
+  }
+
+  const costMap = new Map(
+    (products ?? []).map((product) => [
+      product.id,
+      toNumber(product.cost_price),
+    ]),
+  );
+
   const grouped = new Map<string, ProductSalesReport>();
 
   for (const item of items) {
     const key = item.product_id ?? item.product_name;
+
+    const revenue = toNumber(item.total_price);
+
+    const costPrice = item.product_id
+      ? costMap.get(item.product_id) ?? 0
+      : 0;
+
+    const cost = costPrice * item.quantity;
 
     const current = grouped.get(key) ?? {
       productId: item.product_id ?? "",
@@ -336,10 +520,21 @@ export async function getProductSalesReport(
       sku: item.sku,
       quantity: 0,
       revenue: 0,
+      cost: 0,
+      grossProfit: 0,
+      margin: 0,
     };
 
     current.quantity += item.quantity;
-    current.revenue += toNumber(item.total_price);
+    current.revenue += revenue;
+    current.cost += cost;
+    current.grossProfit =
+      current.revenue - current.cost;
+
+    current.margin =
+      current.revenue > 0
+        ? (current.grossProfit / current.revenue) * 100
+        : 0;
 
     grouped.set(key, current);
   }

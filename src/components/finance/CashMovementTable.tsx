@@ -3,6 +3,7 @@ import {
   ArrowRight,
   ArrowUpCircle,
   CalendarDays,
+  ArrowLeftRight,
 } from "lucide-react";
 
 import type { CashMovement } from "@/features/finance/finance.types";
@@ -37,6 +38,31 @@ function getAccountName(
   return (
     accounts.find((account) => account.id === accountId)
       ?.name ?? "Conta financeira"
+  );
+}
+
+function getTransferDestination(
+  movement: CashMovement,
+  movements: CashMovement[],
+  accounts: CashMovementTableProps["accounts"],
+) {
+  if (!movement.transferId) {
+    return null;
+  }
+
+  const relatedMovement = movements.find(
+    (item) =>
+      item.transferId === movement.transferId &&
+      item.id !== movement.id,
+  );
+
+  if (!relatedMovement) {
+    return null;
+  }
+
+  return getAccountName(
+    relatedMovement.financialAccountId,
+    accounts,
   );
 }
 
@@ -85,6 +111,46 @@ export function CashMovementTable({
     return <EmptyState />;
   }
 
+  /**
+   * Uma transferência gera dois registros no banco:
+   * - saída na conta de origem
+   * - entrada na conta de destino
+   *
+   * Na interface, porém, mostramos apenas uma linha para representar
+   * a transferência completa.
+   */
+  const displayMovements = (() => {
+    const result: CashMovement[] = [];
+    const processedTransfers = new Set<string>();
+
+    for (const movement of movements) {
+      if (!movement.transferId) {
+        result.push(movement);
+        continue;
+      }
+
+      if (processedTransfers.has(movement.transferId)) {
+        continue;
+      }
+
+      processedTransfers.add(movement.transferId);
+
+      const relatedMovements = movements.filter(
+        (item) => item.transferId === movement.transferId,
+      );
+
+      // Preferimos o movimento de saída como representante da transferência.
+      // Se ele não estiver disponível na página atual, usamos o primeiro registro.
+      const sourceMovement =
+        relatedMovements.find((item) => item.type === "expense") ??
+        relatedMovements[0];
+
+      result.push(sourceMovement);
+    }
+
+    return result;
+  })();
+
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       {/* Desktop */}
@@ -116,16 +182,40 @@ export function CashMovementTable({
             {isLoading ? (
               <LoadingRows />
             ) : (
-              movements.map((movement) => {
-                const isIncome =
-                  movement.type === "income";
+              displayMovements.map((movement) => {
+                const isTransfer = Boolean(movement.transferId);
+                const isIncome = movement.type === "income";
+
+                const transferMovements = movement.transferId
+                  ? movements.filter(
+                      (item) => item.transferId === movement.transferId,
+                    )
+                  : [];
+
+                const sourceMovement =
+                  transferMovements.find(
+                    (item) => item.type === "expense",
+                  ) ?? movement;
+
+                const destinationMovement =
+                  transferMovements.find(
+                    (item) => item.type === "income",
+                  ) ?? movement;
+
+                const sourceAccountName = getAccountName(
+                  sourceMovement.financialAccountId,
+                  accounts,
+                );
+
+                const destinationAccountName = getAccountName(
+                  destinationMovement.financialAccountId,
+                  accounts,
+                );
 
                 return (
                   <tr
                     key={movement.id}
-                    onClick={() =>
-                      onSelect?.(movement)
-                    }
+                    onClick={() => onSelect?.(movement)}
                     className={`transition ${
                       onSelect
                         ? "cursor-pointer hover:bg-slate-50"
@@ -133,21 +223,26 @@ export function CashMovementTable({
                     }`}
                   >
                     <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-                      {formatDate(
-                        movement.movementDate,
-                      )}
+                      {formatDate(movement.movementDate)}
                     </td>
 
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <div
                           className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                            isIncome
-                              ? "bg-emerald-50"
-                              : "bg-red-50"
+                            isTransfer
+                              ? "bg-blue-50"
+                              : isIncome
+                                ? "bg-emerald-50"
+                                : "bg-red-50"
                           }`}
                         >
-                          {isIncome ? (
+                          {isTransfer ? (
+                            <ArrowLeftRight
+                              size={18}
+                              className="text-blue-600"
+                            />
+                          ) : isIncome ? (
                             <ArrowUpCircle
                               size={18}
                               className="text-emerald-600"
@@ -162,36 +257,49 @@ export function CashMovementTable({
 
                         <div className="min-w-0">
                           <p className="truncate font-medium text-slate-900">
-                            {movement.description}
+                            {isTransfer
+                              ? "Transferência entre contas"
+                              : movement.description}
                           </p>
 
-                          {movement.notes && (
+                          {isTransfer ? (
+                            <p className="mt-0.5 truncate text-xs text-slate-500">
+                              {sourceAccountName} →{" "}
+                              {destinationAccountName}
+                            </p>
+                          ) : movement.notes ? (
                             <p className="mt-0.5 max-w-md truncate text-xs text-slate-500">
                               {movement.notes}
                             </p>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </td>
 
                     <td className="px-6 py-4 text-sm text-slate-600">
-                      {getAccountName(
-                        movement.financialAccountId,
-                        accounts,
-                      )}
+                      {isTransfer
+                        ? sourceAccountName
+                        : getAccountName(
+                            movement.financialAccountId,
+                            accounts,
+                          )}
                     </td>
 
                     <td
                       className={`px-6 py-4 text-right text-sm font-semibold ${
-                        isIncome
-                          ? "text-emerald-600"
-                          : "text-red-600"
+                        isTransfer
+                          ? "text-blue-600"
+                          : isIncome
+                            ? "text-emerald-600"
+                            : "text-red-600"
                       }`}
                     >
-                      {isIncome ? "+" : "-"}
-                      {formatCurrency(
-                        movement.amount,
-                      )}
+                      {isTransfer
+                        ? ""
+                        : isIncome
+                          ? "+"
+                          : "-"}
+                      {formatCurrency(movement.amount)}
                     </td>
 
                     <td className="px-4 py-4 text-right">
@@ -213,39 +321,65 @@ export function CashMovementTable({
       {/* Mobile */}
       <div className="divide-y divide-slate-100 md:hidden">
         {isLoading ? (
-          Array.from({ length: 5 }).map(
-            (_, index) => (
-              <div
-                key={index}
-                className="p-4"
-              >
-                <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
-              </div>
-            ),
-          )
+          Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="p-4">
+              <div className="h-20 animate-pulse rounded-lg bg-slate-100" />
+            </div>
+          ))
         ) : (
-          movements.map((movement) => {
-            const isIncome =
-              movement.type === "income";
+          displayMovements.map((movement) => {
+            const isTransfer = Boolean(movement.transferId);
+            const isIncome = movement.type === "income";
+
+            const transferMovements = movement.transferId
+              ? movements.filter(
+                  (item) => item.transferId === movement.transferId,
+                )
+              : [];
+
+            const sourceMovement =
+              transferMovements.find(
+                (item) => item.type === "expense",
+              ) ?? movement;
+
+            const destinationMovement =
+              transferMovements.find(
+                (item) => item.type === "income",
+              ) ?? movement;
+
+            const sourceAccountName = getAccountName(
+              sourceMovement.financialAccountId,
+              accounts,
+            );
+
+            const destinationAccountName = getAccountName(
+              destinationMovement.financialAccountId,
+              accounts,
+            );
 
             return (
               <button
                 key={movement.id}
                 type="button"
-                onClick={() =>
-                  onSelect?.(movement)
-                }
+                onClick={() => onSelect?.(movement)}
                 disabled={!onSelect}
                 className="flex w-full items-center gap-4 p-4 text-left transition hover:bg-slate-50 disabled:cursor-default"
               >
                 <div
                   className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-                    isIncome
-                      ? "bg-emerald-50"
-                      : "bg-red-50"
+                    isTransfer
+                      ? "bg-blue-50"
+                      : isIncome
+                        ? "bg-emerald-50"
+                        : "bg-red-50"
                   }`}
                 >
-                  {isIncome ? (
+                  {isTransfer ? (
+                    <ArrowLeftRight
+                      size={19}
+                      className="text-blue-600"
+                    />
+                  ) : isIncome ? (
                     <ArrowUpCircle
                       size={19}
                       className="text-emerald-600"
@@ -260,31 +394,46 @@ export function CashMovementTable({
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-slate-900">
-                    {movement.description}
+                    {isTransfer
+                      ? "Transferência entre contas"
+                      : movement.description}
                   </p>
 
                   <p className="mt-1 text-xs text-slate-500">
-                    {formatDate(
-                      movement.movementDate,
-                    )}{" "}
-                    •{" "}
-                    {getAccountName(
-                      movement.financialAccountId,
-                      accounts,
-                    )}
+                    {formatDate(movement.movementDate)} •{" "}
+                    {isTransfer
+                      ? `${sourceAccountName} → ${destinationAccountName}`
+                      : getAccountName(
+                          movement.financialAccountId,
+                          accounts,
+                        )}
                   </p>
+
+                  {isTransfer ? (
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      Transferência interna
+                    </p>
+                  ) : movement.notes ? (
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                      {movement.notes}
+                    </p>
+                  ) : null}
 
                   <p
                     className={`mt-1 text-sm font-semibold ${
-                      isIncome
-                        ? "text-emerald-600"
-                        : "text-red-600"
+                      isTransfer
+                        ? "text-blue-600"
+                        : isIncome
+                          ? "text-emerald-600"
+                          : "text-red-600"
                     }`}
                   >
-                    {isIncome ? "+" : "-"}
-                    {formatCurrency(
-                      movement.amount,
-                    )}
+                    {isTransfer
+                      ? ""
+                      : isIncome
+                        ? "+"
+                        : "-"}
+                    {formatCurrency(movement.amount)}
                   </p>
                 </div>
 

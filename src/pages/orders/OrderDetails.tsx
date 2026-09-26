@@ -9,13 +9,11 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import {
   useOrderDetailsQuery,
-  useUpdateOrderPaymentStatusMutation,
   useUpdateOrderStatusMutation,
 } from "@/features/orders/orders.queries";
 
 import type {
   OrderStatus,
-  PaymentStatus,
 } from "@/features/orders/orders.types";
 
 type StatusConfig = {
@@ -28,22 +26,27 @@ const statusConfig: Record<string, StatusConfig> = {
     label: "Pendente",
     className: "bg-slate-100 text-slate-700",
   },
+
   confirmed: {
     label: "Confirmado",
     className: "bg-blue-50 text-blue-700",
   },
+
   processing: {
     label: "Processando",
     className: "bg-amber-50 text-amber-700",
   },
+
   shipped: {
     label: "Enviado",
     className: "bg-indigo-50 text-indigo-700",
   },
+
   completed: {
     label: "Concluído",
     className: "bg-green-50 text-green-700",
   },
+
   cancelled: {
     label: "Cancelado",
     className: "bg-red-50 text-red-700",
@@ -55,14 +58,17 @@ const paymentStatusConfig: Record<string, StatusConfig> = {
     label: "Pendente",
     className: "bg-slate-100 text-slate-700",
   },
+
   paid: {
     label: "Pago",
     className: "bg-green-50 text-green-700",
   },
+
   partially_paid: {
     label: "Parcialmente pago",
     className: "bg-amber-50 text-amber-700",
   },
+
   refunded: {
     label: "Reembolsado",
     className: "bg-red-50 text-red-700",
@@ -103,54 +109,20 @@ export function OrderDetails() {
     isLoading,
     isError,
     error,
-    refetch,
   } = useOrderDetailsQuery(id);
 
   const updateStatusMutation =
     useUpdateOrderStatusMutation();
 
-  const updatePaymentStatusMutation =
-    useUpdateOrderPaymentStatusMutation();
-
-  function handleStatusChange(
-    value: string,
-  ) {
+  function handleStatusChange(value: string) {
     if (!id) {
       return;
     }
 
-    updateStatusMutation.mutate(
-      {
-        orderId: id,
-        status: value as OrderStatus,
-      },
-      {
-        onSuccess: () => {
-          void refetch();
-        },
-      },
-    );
-  }
-
-  function handlePaymentStatusChange(
-    value: string,
-  ) {
-    if (!id) {
-      return;
-    }
-
-    updatePaymentStatusMutation.mutate(
-      {
-        orderId: id,
-        paymentStatus:
-          value as PaymentStatus,
-      },
-      {
-        onSuccess: () => {
-          void refetch();
-        },
-      },
-    );
+    updateStatusMutation.mutate({
+      orderId: id,
+      status: value as OrderStatus,
+    });
   }
 
   if (isLoading) {
@@ -251,14 +223,29 @@ export function OrderDetails() {
             disabled={updateStatusMutation.isPending}
             className="h-10 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 text-sm font-medium text-[var(--color-text-primary)] outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 disabled:cursor-not-allowed disabled:opacity-60 sm:w-[220px]"
           >
-            <option value="pending">Pendente</option>
-            <option value="confirmed">Confirmado</option>
+            <option value="pending">
+              Pendente
+            </option>
+
+            <option value="confirmed">
+              Confirmado
+            </option>
+
             <option value="processing">
               Em processamento
             </option>
-            <option value="shipped">Enviado</option>
-            <option value="completed">Concluído</option>
-            <option value="cancelled">Cancelado</option>
+
+            <option value="shipped">
+              Enviado
+            </option>
+
+            <option value="completed">
+              Concluído
+            </option>
+
+            <option value="cancelled">
+              Cancelado
+            </option>
           </select>
 
           {updateStatusMutation.isPending && (
@@ -510,49 +497,30 @@ export function OrderDetails() {
 
             <div className="mt-4 space-y-4">
               <div>
-                <label
-                  htmlFor="payment-status"
-                  className="text-xs text-[var(--color-text-muted)]"
-                >
+                <p className="text-xs text-[var(--color-text-muted)]">
                   Status
-                </label>
+                </p>
 
-                <select
-                  id="payment-status"
-                  value={order.paymentStatus}
-                  onChange={(event) =>
-                    handlePaymentStatusChange(
-                      event.target.value,
-                    )
-                  }
-                  disabled={
-                    updatePaymentStatusMutation.isPending
-                  }
-                  className={`mt-1 w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium outline-none transition focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/10 disabled:cursor-not-allowed disabled:opacity-60 ${paymentStatus.className}`}
+                <span
+                  className={`mt-1 inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${paymentStatus.className}`}
                 >
-                  <option value="pending">Pendente</option>
-                  <option value="paid">Pago</option>
-                  <option value="partially_paid">
-                    Parcialmente pago
-                  </option>
-                  <option value="refunded">
-                    Reembolsado
-                  </option>
-                </select>
+                  {paymentStatus.label}
+                </span>
 
-                {updatePaymentStatusMutation.isPending && (
-                  <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">
-                    Atualizando pagamento...
-                  </p>
-                )}
+                <p className="mt-2 text-xs leading-5 text-[var(--color-text-muted)]">
+                  O recebimento deve ser registrado em
+                  Financeiro → Contas a receber para
+                  atualizar o caixa e os lançamentos
+                  financeiros.
+                </p>
 
-                {updatePaymentStatusMutation.isError && (
-                  <p className="mt-1.5 text-xs text-red-600">
-                    {updatePaymentStatusMutation.error instanceof Error
-                      ? updatePaymentStatusMutation.error.message
-                      : "Não foi possível atualizar o pagamento."}
-                  </p>
-                )}
+                <button
+                  type="button"
+                  onClick={() => navigate("/finance")}
+                  className="mt-3 inline-flex h-9 items-center rounded-lg border border-[var(--color-border)] px-3 text-xs font-medium text-[var(--color-text-primary)] transition hover:bg-slate-50"
+                >
+                  Ir para Financeiro
+                </button>
               </div>
 
               <div>

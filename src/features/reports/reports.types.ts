@@ -39,6 +39,9 @@ export interface ProductSalesReport {
   sku: string | null;
   quantity: number;
   revenue: number;
+  cost: number;
+  grossProfit: number;
+  margin: number;
 }
 
 export interface CustomerSalesReport {

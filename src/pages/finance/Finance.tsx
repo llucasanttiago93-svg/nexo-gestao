@@ -1096,20 +1096,12 @@ export function Finance() {
           onClose={() =>
             setSelectedReceivable(null)
           }
-          onPay={(installment, accountId) => {
-
-            const remaining = Math.max(
-              installment.amount -
-              installment.paidAmount,
-              0,
-            );
-
+          onPay={(installment, accountId, amount) => {
             handlePayReceivable(
               installment.id,
               accountId,
-              remaining,
+              amount,
             );
-
           }}
         />
       )}

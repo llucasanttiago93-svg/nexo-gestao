@@ -32,7 +32,6 @@ export type CashMovementStatus =
   | "completed"
   | "cancelled";
 
-
 // =====================================================
 // CONTAS FINANCEIRAS
 // =====================================================
@@ -51,7 +50,6 @@ export interface FinanceAccount {
   updatedAt: string;
 }
 
-
 // =====================================================
 // CATEGORIAS FINANCEIRAS
 // =====================================================
@@ -65,7 +63,6 @@ export interface FinanceCategory {
   createdAt: string;
   updatedAt: string;
 }
-
 
 // =====================================================
 // CONTAS A RECEBER
@@ -85,7 +82,6 @@ export interface AccountReceivable {
   updatedAt: string;
   nextDueDate: string | null;
 }
-
 
 // =====================================================
 // PARCELAS — CONTAS A RECEBER
@@ -107,7 +103,6 @@ export interface ReceivableInstallment {
   updatedAt: string;
 }
 
-
 // =====================================================
 // CONTAS A PAGAR
 // =====================================================
@@ -124,7 +119,6 @@ export interface AccountPayable {
   createdAt: string;
   updatedAt: string;
 }
-
 
 // =====================================================
 // PARCELAS — CONTAS A PAGAR
@@ -146,7 +140,6 @@ export interface PayableInstallment {
   updatedAt: string;
 }
 
-
 // =====================================================
 // MOVIMENTAÇÕES DE CAIXA
 // =====================================================
@@ -163,12 +156,12 @@ export interface CashMovement {
   orderId: string | null;
   receivableInstallmentId: string | null;
   payableInstallmentId: string | null;
+  transferId: string | null;
   status: CashMovementStatus;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
 }
-
 
 // =====================================================
 // RESUMO FINANCEIRO
@@ -178,16 +171,12 @@ export interface FinanceSummary {
   totalIncome: number;
   totalExpense: number;
   balance: number;
-
   totalReceivable: number;
   totalPayable: number;
-
   overdueReceivable: number;
   overduePayable: number;
-
   accountBalance: number;
 }
-
 
 // =====================================================
 // PERÍODO
@@ -197,7 +186,6 @@ export interface FinancePeriod {
   startDate: string;
   endDate: string;
 }
-
 
 // =====================================================
 // FLUXO DE CAIXA
@@ -210,7 +198,6 @@ export interface CashFlowPoint {
   balance?: number;
 }
 
-
 // =====================================================
 // PAGAMENTO
 // =====================================================
@@ -221,7 +208,6 @@ export interface PayInstallmentInput {
   amount: number;
 }
 
-
 // =====================================================
 // CRIAR CONTA A RECEBER A PARTIR DE PEDIDO
 // =====================================================
@@ -231,7 +217,6 @@ export interface CreateReceivableFromOrderInput {
   dueDate?: string;
   paymentMethod?: string | null;
 }
-
 
 // =====================================================
 // CRIAR CONTA A PAGAR

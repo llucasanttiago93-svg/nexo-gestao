@@ -92,12 +92,34 @@ export function useCreateOrderMutation() {
     mutationFn: createOrder,
 
     onSuccess: async () => {
+      // Atualiza pedidos
       await queryClient.invalidateQueries({
         queryKey: ordersQueryKeys.all,
       });
 
+      // Atualiza Dashboard
       await queryClient.invalidateQueries({
         queryKey: ["dashboard"],
+      });
+
+      // Atualiza Contas a Receber
+      await queryClient.invalidateQueries({
+        queryKey: ["finance", "receivables"],
+      });
+
+      // Atualiza resumo financeiro
+      await queryClient.invalidateQueries({
+        queryKey: ["finance", "summary"],
+      });
+
+      // Atualiza fluxo de caixa
+      await queryClient.invalidateQueries({
+        queryKey: ["finance", "cash-flow"],
+      });
+
+      // Atualiza produtos e estoque
+      await queryClient.invalidateQueries({
+        queryKey: ["products"],
       });
     },
   });
@@ -125,6 +147,10 @@ export function useUpdateOrderStatusMutation() {
       void queryClient.invalidateQueries({
         queryKey: ["dashboard"],
       });
+
+      void queryClient.invalidateQueries({
+        queryKey: ["finance", "summary"],
+      });
     },
   });
 }
@@ -150,6 +176,14 @@ export function useUpdateOrderPaymentStatusMutation() {
 
       void queryClient.invalidateQueries({
         queryKey: ["dashboard"],
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: ["finance", "summary"],
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: ["finance", "receivable"],
       });
     },
   });

@@ -27,6 +27,8 @@ import Reports from "@/pages/reports/Reports";
 
 import { Finance } from "@/pages/finance/Finance";
 
+import Settings from "@/pages/settings/Settings";
+
 export function AppRouter() {
   return (
     <BrowserRouter>
@@ -198,7 +200,7 @@ export function AppRouter() {
           element={
             <ProtectedRoute>
               <AppLayout currentPage="Configurações">
-                <div>Configurações</div>
+                <Settings />
               </AppLayout>
             </ProtectedRoute>
           }

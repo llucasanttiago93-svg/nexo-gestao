@@ -227,6 +227,7 @@ function mapCashMovement(row: any): CashMovement {
     orderId: row.order_id,
     receivableInstallmentId: row.receivable_installment_id,
     payableInstallmentId: row.payable_installment_id,
+    transferId: row.transfer_id,
     status: row.status,
     notes: row.notes,
     createdAt: row.created_at,
@@ -789,42 +790,49 @@ export async function getFinanceSummary(): Promise<FinanceSummary> {
 
   const [
     cashResult,
-    receivableResult,
-    payableResult,
+    receivableInstallmentsResult,
+    payableInstallmentsResult,
   ] = await Promise.all([
     supabase
       .from("cash_movements")
-      .select("type, amount")
+      .select("type, amount, transfer_id")
       .eq("user_id", userId)
       .eq("status", "completed"),
 
     supabase
-      .from("accounts_receivable")
-      .select("total_amount, status")
-      .eq("user_id", userId),
+      .from("accounts_receivable_installments")
+      .select("amount, paid_amount, status, due_date, accounts_receivable!inner(user_id)")
+      .eq("accounts_receivable.user_id", userId),
 
     supabase
-      .from("accounts_payable")
-      .select("total_amount, status")
-      .eq("user_id", userId),
+      .from("accounts_payable_installments")
+      .select("amount, paid_amount, status, due_date, accounts_payable!inner(user_id)")
+      .eq("accounts_payable.user_id", userId),
   ]);
 
   if (cashResult.error) {
     throw cashResult.error;
   }
 
-  if (receivableResult.error) {
-    throw receivableResult.error;
+  if (receivableInstallmentsResult.error) {
+    throw receivableInstallmentsResult.error;
   }
 
-  if (payableResult.error) {
-    throw payableResult.error;
+  if (payableInstallmentsResult.error) {
+    throw payableInstallmentsResult.error;
   }
 
   let totalIncome = 0;
   let totalExpense = 0;
 
   for (const movement of cashResult.data ?? []) {
+    // Transferências entre contas próprias não representam
+    // receita nem despesa consolidada. Elas apenas mudam o
+    // dinheiro de uma conta financeira para outra.
+    if (movement.transfer_id) {
+      continue;
+    }
+
     const amount = Number(movement.amount);
 
     if (movement.type === "income") {
@@ -839,37 +847,42 @@ export async function getFinanceSummary(): Promise<FinanceSummary> {
   let totalReceivable = 0;
   let overdueReceivable = 0;
 
-  for (const receivable of receivableResult.data ?? []) {
+  for (const installment of receivableInstallmentsResult.data ?? []) {
+    const amount = Number(installment.amount);
+    const paidAmount = Number(installment.paid_amount);
+    const outstanding = Math.max(amount - paidAmount, 0);
+
     if (
-      receivable.status !== "paid" &&
-      receivable.status !== "cancelled" &&
-      receivable.status !== "refunded"
+      ["open", "partially_paid", "overdue"].includes(
+        installment.status,
+      )
     ) {
-      totalReceivable += Number(
-        receivable.total_amount,
-      );
+      totalReceivable += outstanding;
     }
 
-    if (receivable.status === "overdue") {
-      overdueReceivable += Number(
-        receivable.total_amount,
-      );
+    if (installment.status === "overdue") {
+      overdueReceivable += outstanding;
     }
   }
 
   let totalPayable = 0;
   let overduePayable = 0;
 
-  for (const payable of payableResult.data ?? []) {
+  for (const installment of payableInstallmentsResult.data ?? []) {
+    const amount = Number(installment.amount);
+    const paidAmount = Number(installment.paid_amount);
+    const outstanding = Math.max(amount - paidAmount, 0);
+
     if (
-      payable.status !== "paid" &&
-      payable.status !== "cancelled"
+      ["open", "partially_paid", "overdue"].includes(
+        installment.status,
+      )
     ) {
-      totalPayable += Number(payable.total_amount);
+      totalPayable += outstanding;
     }
 
-    if (payable.status === "overdue") {
-      overduePayable += Number(payable.total_amount);
+    if (installment.status === "overdue") {
+      overduePayable += outstanding;
     }
   }
 
@@ -917,9 +930,7 @@ export async function getCashFlow(
 
   const { data, error } = await supabase
     .from("cash_movements")
-    .select(
-      "type, amount, movement_date",
-    )
+    .select("type, amount, movement_date, transfer_id")
     .eq("user_id", userId)
     .eq("status", "completed")
     .gte("movement_date", startDate)
@@ -941,10 +952,13 @@ export async function getCashFlow(
   >();
 
   for (const movement of data ?? []) {
-    const date = String(
-      movement.movement_date,
-    );
+    // Transferências internas não devem inflar
+    // entradas/saídas no fluxo consolidado.
+    if (movement.transfer_id) {
+      continue;
+    }
 
+    const date = String(movement.movement_date);
     const month = date.slice(0, 7);
 
     const current = grouped.get(month) ?? {
@@ -970,8 +984,35 @@ export async function getCashFlow(
       date: `${month}-01`,
       income: values.income,
       expense: values.expense,
-      balance:
-        values.income - values.expense,
+      balance: values.income - values.expense,
     }),
   );
+}
+
+export interface TransferFinanceAccountInput {
+  sourceAccountId: string;
+  destinationAccountId: string;
+  amount: number;
+  description?: string;
+}
+
+export async function transferBetweenFinanceAccounts(
+  input: TransferFinanceAccountInput,
+) {
+  const { data, error } = await supabase.rpc(
+    "transfer_between_finance_accounts",
+    {
+      p_source_account_id: input.sourceAccountId,
+      p_destination_account_id:
+        input.destinationAccountId,
+      p_amount: input.amount,
+      p_description: input.description ?? null,
+    },
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
 }

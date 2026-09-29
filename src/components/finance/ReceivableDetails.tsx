@@ -10,6 +10,8 @@ import {
 
 import { useEffect, useState } from "react";
 
+import { useSettings } from "@/features/settings/SettingsContext";
+
 import type {
   AccountReceivable,
   FinanceAccount,
@@ -30,18 +32,6 @@ interface ReceivableDetailsProps {
   onClose: () => void;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR").format(
-    new Date(`${value}T00:00:00`),
-  );
-}
 
 function getStatusLabel(status: string) {
   const statusMap: Record<string, string> = {
@@ -81,6 +71,7 @@ export function ReceivableDetails({
   onPay,
   onClose,
 }: ReceivableDetailsProps) {
+  const { formatCurrency, formatDate } = useSettings();
   const totalPaid = installments.reduce(
     (total, installment) =>
       total + installment.paidAmount,

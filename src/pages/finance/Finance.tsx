@@ -22,6 +22,8 @@ import {
   useCreatePayableMutation,
 } from "@/features/finance/finance.queries";
 
+import { useSettings } from "@/features/settings/SettingsContext";
+
 import { CashFlowChart } from "@/components/finance/CashFlowChart";
 import { ReceivableTable } from "@/components/finance/ReceivableTable";
 
@@ -53,8 +55,6 @@ import type {
   AccountPayable,
 } from "@/features/finance/finance.types";
 
-
-
 type FinanceTab =
   | "overview"
   | "receivable"
@@ -74,16 +74,11 @@ function getToday() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
 export function Finance() {
   const [activeTab, setActiveTab] =
     useState<FinanceTab>("overview");
+
+  const { formatCurrency } = useSettings();
 
   /*
    * =====================================================
@@ -287,7 +282,7 @@ export function Finance() {
   const {
     data: payableInstallments = [],
     isLoading:
-    isPayableInstallmentsLoading,
+      isPayableInstallmentsLoading,
   } = usePayableInstallmentsQuery(
     selectedPayable?.id,
   );
@@ -391,7 +386,6 @@ export function Finance() {
     });
   }
 
-
   /*
    * =====================================================
    * RENDER
@@ -433,10 +427,11 @@ export function Finance() {
                 onClick={() =>
                   setActiveTab(tab.id)
                 }
-                className={`relative pb-3 text-sm font-medium transition ${isActive
+                className={`relative pb-3 text-sm font-medium transition ${
+                  isActive
                     ? "text-gray-900"
                     : "text-gray-500 hover:text-gray-800"
-                  }`}
+                }`}
               >
                 {tab.label}
 
@@ -481,8 +476,8 @@ export function Finance() {
                     {isLoading
                       ? "..."
                       : formatCurrency(
-                        summary?.accountBalance ?? 0,
-                      )}
+                          summary?.accountBalance ?? 0,
+                        )}
                   </p>
                 </div>
 
@@ -507,8 +502,8 @@ export function Finance() {
                     {isLoading
                       ? "..."
                       : formatCurrency(
-                        summary?.totalReceivable ?? 0,
-                      )}
+                          summary?.totalReceivable ?? 0,
+                        )}
                   </p>
 
                   <p className="mt-1 text-xs text-gray-500">
@@ -537,8 +532,8 @@ export function Finance() {
                     {isLoading
                       ? "..."
                       : formatCurrency(
-                        summary?.totalPayable ?? 0,
-                      )}
+                          summary?.totalPayable ?? 0,
+                        )}
                   </p>
 
                   <p className="mt-1 text-xs text-gray-500">
@@ -564,16 +559,17 @@ export function Finance() {
                   </p>
 
                   <p
-                    className={`mt-2 text-2xl font-bold ${(summary?.balance ?? 0) >= 0
+                    className={`mt-2 text-2xl font-bold ${
+                      (summary?.balance ?? 0) >= 0
                         ? "text-gray-900"
                         : "text-red-600"
-                      }`}
+                    }`}
                   >
                     {isLoading
                       ? "..."
                       : formatCurrency(
-                        summary?.balance ?? 0,
-                      )}
+                          summary?.balance ?? 0,
+                        )}
                   </p>
 
                   <p className="mt-1 text-xs text-gray-500">
@@ -815,6 +811,7 @@ export function Finance() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 
             <div>
+
               <h2 className="text-lg font-semibold text-gray-900">
                 Contas a pagar
               </h2>
@@ -822,9 +819,11 @@ export function Finance() {
               <p className="mt-1 text-sm text-gray-500">
                 Gerencie despesas, vencimentos e pagamentos.
               </p>
+
             </div>
 
             <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center">
+
               <div className="text-sm text-gray-500">
                 {payables.length}{" "}
                 {payables.length === 1
@@ -839,6 +838,7 @@ export function Finance() {
               >
                 + Nova conta
               </button>
+
             </div>
 
           </div>
@@ -878,6 +878,7 @@ export function Finance() {
         <div className="space-y-6">
 
           <div>
+
             <h2 className="text-lg font-semibold text-gray-900">
               Caixas e bancos
             </h2>
@@ -886,16 +887,21 @@ export function Finance() {
               Acompanhe seus saldos e todas as
               movimentações financeiras.
             </p>
+
           </div>
 
           {/* CONTAS FINANCEIRAS */}
 
           {isAccountsLoading ? (
+
             <div className="rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
               Carregando contas...
             </div>
+
           ) : accounts.length === 0 ? (
+
             <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center">
+
               <Wallet className="mx-auto h-8 w-8 text-gray-400" />
 
               <p className="mt-3 text-sm font-medium text-gray-900">
@@ -906,16 +912,24 @@ export function Finance() {
                 Cadastre uma conta financeira para
                 começar a controlar seu caixa.
               </p>
+
             </div>
+
           ) : (
+
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+
               {accounts.map((account) => (
+
                 <div
                   key={account.id}
                   className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm"
                 >
+
                   <div className="flex items-start justify-between">
+
                     <div>
+
                       <p className="font-semibold text-gray-900">
                         {account.name}
                       </p>
@@ -936,11 +950,13 @@ export function Finance() {
                           {account.bankName}
                         </p>
                       )}
+
                     </div>
 
                     <div className="rounded-lg bg-gray-100 p-2">
                       <Landmark className="h-4 w-4 text-gray-600" />
                     </div>
+
                   </div>
 
                   <p className="mt-5 text-2xl font-bold text-gray-900">
@@ -952,15 +968,21 @@ export function Finance() {
                   <p className="mt-1 text-xs text-gray-500">
                     Saldo atual
                   </p>
+
                 </div>
+
               ))}
+
             </div>
+
           )}
 
           {/* MOVIMENTAÇÕES */}
 
           <section className="space-y-4">
+
             <div>
+
               <h3 className="text-lg font-semibold text-gray-900">
                 Movimentações
               </h3>
@@ -969,6 +991,7 @@ export function Finance() {
                 Entradas e saídas realizadas nas contas
                 financeiras.
               </p>
+
             </div>
 
             {isCashMovementsError && (
@@ -1011,6 +1034,7 @@ export function Finance() {
             {!isCashMovementsLoading &&
               cashMovementTotalPages > 1 && (
                 <div className="flex flex-col gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+
                   <p className="text-sm text-gray-500">
                     Página{" "}
                     <span className="font-medium text-gray-900">
@@ -1023,6 +1047,7 @@ export function Finance() {
                   </p>
 
                   <div className="flex gap-2">
+
                     <button
                       type="button"
                       disabled={cashMovementPage <= 1}
@@ -1056,10 +1081,14 @@ export function Finance() {
                     >
                       Próxima
                     </button>
+
                   </div>
+
                 </div>
               )}
+
           </section>
+
         </div>
       )}
 

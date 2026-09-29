@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+
+import { useSettings } from "@/features/settings/SettingsContext";
 import {
     CheckCircle2,
     CreditCard,
@@ -28,18 +30,6 @@ interface PayableDetailsProps {
     ) => void;
 }
 
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-    }).format(value);
-}
-
-function formatDate(date: string) {
-    return new Intl.DateTimeFormat("pt-BR").format(
-        new Date(`${date}T00:00:00`),
-    );
-}
 
 function getStatusLabel(
     status: PayableInstallment["status"],
@@ -95,6 +85,7 @@ export function PayableDetails({
     onClose,
     onPay,
 }: PayableDetailsProps) {
+  const { formatCurrency, formatDate } = useSettings();
     const [paymentInstallment, setPaymentInstallment] =
         useState<PayableInstallment | null>(null);
 

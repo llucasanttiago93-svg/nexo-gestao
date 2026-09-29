@@ -1,6 +1,10 @@
+import type { ReactNode } from "react";
+
 import type { Product } from "@/features/products/products.types";
 
 import { StockBadge } from "@/components/products/StockBadge";
+
+import { useSettings } from "@/features/settings/SettingsContext";
 
 interface ProductTableProps {
   products: Product[];
@@ -11,6 +15,8 @@ export function ProductTable({
   products,
   onProductClick,
 }: ProductTableProps) {
+  const { formatCurrency } = useSettings();
+
   return (
     <div className="hidden overflow-x-auto md:block">
       <table className="w-full min-w-[760px]">
@@ -83,7 +89,7 @@ export function ProductTable({
 }
 
 interface TableHeaderProps {
-  children: React.ReactNode;
+  children: ReactNode;
 }
 
 function TableHeader({ children }: TableHeaderProps) {
@@ -122,11 +128,4 @@ function EmptyProducts() {
       </p>
     </div>
   );
-}
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
 }

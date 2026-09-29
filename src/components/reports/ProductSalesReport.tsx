@@ -1,17 +1,11 @@
 import { Package } from "lucide-react";
 
 import type { ProductSalesReport as ProductSalesReportType } from "@/features/reports/reports.types";
+import { useSettings } from "@/features/settings/SettingsContext";
 
 interface ProductSalesReportProps {
   data: ProductSalesReportType[];
   isLoading?: boolean;
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
 }
 
 function formatPercent(value: number) {
@@ -22,6 +16,8 @@ export function ProductSalesReport({
   data,
   isLoading = false,
 }: ProductSalesReportProps) {
+  const { formatCurrency } = useSettings();
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white">
       <div className="border-b border-slate-200 p-5">

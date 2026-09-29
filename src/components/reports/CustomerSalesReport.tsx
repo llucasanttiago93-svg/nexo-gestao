@@ -1,29 +1,26 @@
 import { Users } from "lucide-react";
 
 import type { CustomerSalesReport as CustomerSalesReportType } from "@/features/reports/reports.types";
+import { useSettings } from "@/features/settings/SettingsContext";
 
 interface CustomerSalesReportProps {
   data: CustomerSalesReportType[];
   isLoading?: boolean;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
 export function CustomerSalesReport({
   data,
   isLoading = false,
 }: CustomerSalesReportProps) {
+  const { formatCurrency } = useSettings();
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white">
       <div className="border-b border-slate-200 p-5">
         <h2 className="text-base font-semibold text-slate-900">
           Clientes com maior faturamento
         </h2>
+
         <p className="mt-1 text-sm text-slate-500">
           Clientes que mais compraram no período.
         </p>
@@ -44,6 +41,7 @@ export function CustomerSalesReport({
             size={24}
             className="text-slate-400"
           />
+
           <p className="mt-3 text-sm text-slate-500">
             Nenhuma venda encontrada.
           </p>

@@ -573,8 +573,7 @@ const Settings = () => {
 
             <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
               <p className="text-xs leading-5 text-gray-600">
-                Essas preferências serão utilizadas progressivamente
-                pelos módulos do sistema conforme forem integrados.
+                Essas preferências serão utilizadas pelos módulos do sistema.
               </p>
             </div>
 

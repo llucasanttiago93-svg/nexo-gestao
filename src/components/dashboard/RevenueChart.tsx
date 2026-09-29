@@ -9,21 +9,41 @@ import {
 } from "recharts";
 
 import type { DashboardChartItem } from "@/features/dashboard/dashboard.types";
+import { useSettings } from "@/features/settings/SettingsContext";
 
 interface RevenueChartProps {
   data: DashboardChartItem[];
 }
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
 export function RevenueChart({
   data,
 }: RevenueChartProps) {
+  const { formatCurrency, currency } = useSettings();
+
+  const formatAxisValue = (value: number) => {
+    const formatted = formatCurrency(value);
+
+    if (value >= 1000) {
+      const compactValue = value / 1000;
+
+      const symbol =
+        currency === "BRL"
+          ? "R$"
+          : currency === "USD"
+            ? "US$"
+            : "€";
+
+      return `${symbol} ${compactValue.toLocaleString(
+        "pt-BR",
+        {
+          maximumFractionDigits: 1,
+        },
+      )}k`;
+    }
+
+    return formatted;
+  };
+
   return (
     <section className="rounded-xl border border-[var(--color-border)] bg-white p-5 shadow-[var(--shadow-sm)]">
       <div className="mb-6">
@@ -56,7 +76,7 @@ export function RevenueChart({
               tickLine={false}
               tick={{ fontSize: 12 }}
               tickFormatter={(value) =>
-                `R$ ${(value / 1000).toFixed(0)}k`
+                formatAxisValue(Number(value))
               }
             />
 

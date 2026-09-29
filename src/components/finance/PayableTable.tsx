@@ -1,5 +1,6 @@
 import { ArrowRight, CalendarDays } from "lucide-react";
 
+import { useSettings } from "@/features/settings/SettingsContext";
 import type { AccountPayable } from "@/features/finance/finance.types";
 
 interface PayableTableProps {
@@ -8,57 +9,33 @@ interface PayableTableProps {
   onSelect: (payable: AccountPayable) => void;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("pt-BR").format(
-    new Date(`${date}T00:00:00`),
-  );
-}
-
 function getStatusLabel(status: AccountPayable["status"]) {
   switch (status) {
     case "open":
       return "Em aberto";
-
     case "partially_paid":
       return "Parcialmente pago";
-
     case "paid":
       return "Pago";
-
     case "overdue":
       return "Vencido";
-
     case "cancelled":
       return "Cancelado";
-
     default:
       return status;
   }
 }
 
-function getStatusClass(
-  status: AccountPayable["status"],
-) {
+function getStatusClass(status: AccountPayable["status"]) {
   switch (status) {
     case "paid":
       return "bg-emerald-50 text-emerald-700";
-
     case "partially_paid":
       return "bg-amber-50 text-amber-700";
-
     case "overdue":
       return "bg-red-50 text-red-700";
-
     case "cancelled":
       return "bg-slate-100 text-slate-500";
-
     case "open":
     default:
       return "bg-blue-50 text-blue-700";
@@ -83,10 +60,7 @@ function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
       <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-        <CalendarDays
-          size={22}
-          className="text-slate-400"
-        />
+        <CalendarDays size={22} className="text-slate-400" />
       </div>
 
       <h3 className="text-sm font-semibold text-slate-900">
@@ -105,6 +79,8 @@ export function PayableTable({
   isLoading = false,
   onSelect,
 }: PayableTableProps) {
+  const { formatCurrency, formatDate } = useSettings();
+
   if (!isLoading && payables.length === 0) {
     return <EmptyState />;
   }
@@ -119,19 +95,15 @@ export function PayableTable({
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Descrição
               </th>
-
               <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Vencimento
               </th>
-
               <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Valor
               </th>
-
               <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wide text-slate-500">
                 Status
               </th>
-
               <th className="w-12 px-4 py-3" />
             </tr>
           </thead>
@@ -179,10 +151,7 @@ export function PayableTable({
                   </td>
 
                   <td className="px-4 py-4 text-right">
-                    <ArrowRight
-                      size={17}
-                      className="text-slate-400"
-                    />
+                    <ArrowRight size={17} className="text-slate-400" />
                   </td>
                 </tr>
               ))
@@ -219,12 +188,8 @@ export function PayableTable({
                 {payable.nextDueDate && (
                   <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
                     <CalendarDays size={13} />
-
                     <span>
-                      Vencimento:{" "}
-                      {formatDate(
-                        payable.nextDueDate,
-                      )}
+                      Vencimento: {formatDate(payable.nextDueDate)}
                     </span>
                   </div>
                 )}

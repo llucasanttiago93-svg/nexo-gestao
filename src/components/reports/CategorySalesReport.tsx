@@ -9,23 +9,19 @@ import {
 } from "recharts";
 
 import type { CategorySalesReport as CategorySalesReportType } from "@/features/reports/reports.types";
+import { useSettings } from "@/features/settings/SettingsContext";
 
 interface CategorySalesReportProps {
   data: CategorySalesReportType[];
   isLoading?: boolean;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
 export function CategorySalesReport({
   data,
   isLoading = false,
 }: CategorySalesReportProps) {
+  const { formatCurrency } = useSettings();
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="mb-5">
@@ -68,7 +64,7 @@ export function CategorySalesReport({
               <XAxis
                 type="number"
                 tickFormatter={(value) =>
-                  formatCurrency(value)
+                  formatCurrency(Number(value))
                 }
                 tickLine={false}
                 axisLine={false}

@@ -9,6 +9,8 @@ import {
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useSettings } from "@/features/settings/SettingsContext";
+
 import {
     useCreateOrderMutation,
     useOrderCreateDataQuery,
@@ -18,15 +20,16 @@ import type {
     OrderCreateItem,
 } from "@/features/orders/orders.types";
 
-function formatCurrency(value: number) {
-    return value.toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-    });
-}
-
 export function OrderCreate() {
     const navigate = useNavigate();
+    const { formatCurrency, currency } = useSettings();
+
+    const currencySymbol =
+        currency === "USD"
+            ? "$"
+            : currency === "EUR"
+                ? "€"
+                : "R$";
 
     const {
         data,
@@ -988,7 +991,7 @@ export function OrderCreate() {
 
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-                                        R$
+                                        {currencySymbol}
                                     </span>
 
                                     <input
@@ -1017,7 +1020,7 @@ export function OrderCreate() {
 
                                 <div className="relative">
                                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-                                        R$
+                                        {currencySymbol}
                                     </span>
 
                                     <input

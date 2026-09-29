@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { useSettings } from "@/features/settings/SettingsContext";
+
 import { CashFlowReport } from "@/components/reports/CashFlowReport";
 import { CategorySalesReport } from "@/components/reports/CategorySalesReport";
 import { CustomerSalesReport } from "@/components/reports/CustomerSalesReport";
@@ -34,13 +36,6 @@ import {
 } from "@/features/reports/reports.queries";
 
 import type { ReportFilters as ReportFiltersType } from "@/features/reports/reports.types";
-
-function formatCurrency(value: number) {
-    return new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-    }).format(value);
-}
 
 function getCurrentMonthPeriod(): ReportFiltersType {
     const today = new Date();
@@ -70,6 +65,8 @@ function getCurrentMonthPeriod(): ReportFiltersType {
 }
 
 export default function Reports() {
+    const { formatCurrency } = useSettings();
+
     const defaultPeriodQuery =
         useDefaultReportPeriodQuery();
 

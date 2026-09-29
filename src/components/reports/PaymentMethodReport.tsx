@@ -6,17 +6,11 @@ import {
 } from "lucide-react";
 
 import type { PaymentMethodReport as PaymentMethodReportType } from "@/features/reports/reports.types";
+import { useSettings } from "@/features/settings/SettingsContext";
 
 interface PaymentMethodReportProps {
   data: PaymentMethodReportType[];
   isLoading?: boolean;
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
 }
 
 function getPaymentIcon(method: string) {
@@ -61,6 +55,8 @@ export function PaymentMethodReport({
   data,
   isLoading = false,
 }: PaymentMethodReportProps) {
+  const { formatCurrency } = useSettings();
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white">
       <div className="border-b border-slate-200 p-5">

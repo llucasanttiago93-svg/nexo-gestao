@@ -9,6 +9,8 @@ import {
   YAxis,
 } from "recharts";
 
+import { useSettings } from "@/features/settings/SettingsContext";
+
 interface CashFlowData {
   date: string;
   income: number;
@@ -20,30 +22,21 @@ interface CashFlowChartProps {
   isLoading?: boolean;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-  }).format(new Date(`${value}T00:00:00`));
-}
-
 export function CashFlowChart({
   data,
   isLoading = false,
 }: CashFlowChartProps) {
+  const {
+    formatCurrency,
+    formatDate,
+  } = useSettings();
+
   if (isLoading) {
     return (
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
         <div className="mb-6">
           <div className="h-5 w-40 animate-pulse rounded bg-gray-100" />
+
           <div className="mt-2 h-4 w-64 animate-pulse rounded bg-gray-100" />
         </div>
 
@@ -98,7 +91,9 @@ export function CashFlowChart({
 
               <XAxis
                 dataKey="date"
-                tickFormatter={formatDate}
+                tickFormatter={(value) =>
+                  formatDate(String(value))
+                }
                 tickLine={false}
                 axisLine={false}
                 fontSize={12}
@@ -106,7 +101,9 @@ export function CashFlowChart({
               />
 
               <YAxis
-                tickFormatter={(value) => formatCurrency(value)}
+                tickFormatter={(value) =>
+                  formatCurrency(Number(value))
+                }
                 tickLine={false}
                 axisLine={false}
                 fontSize={11}
@@ -116,9 +113,13 @@ export function CashFlowChart({
               <Tooltip
                 formatter={(value, name) => [
                   formatCurrency(Number(value)),
-                  name === "income" ? "Entradas" : "Saídas",
+                  name === "income"
+                    ? "Entradas"
+                    : "Saídas",
                 ]}
-                labelFormatter={(label) => formatDate(String(label))}
+                labelFormatter={(label) =>
+                  formatDate(String(label))
+                }
                 contentStyle={{
                   borderRadius: "0.75rem",
                   border: "1px solid #e5e7eb",
@@ -132,7 +133,9 @@ export function CashFlowChart({
                 align="right"
                 height={36}
                 formatter={(value) =>
-                  value === "income" ? "Entradas" : "Saídas"
+                  value === "income"
+                    ? "Entradas"
+                    : "Saídas"
                 }
               />
 

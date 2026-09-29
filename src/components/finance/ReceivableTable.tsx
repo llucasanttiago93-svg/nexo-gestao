@@ -10,24 +10,14 @@ import type {
   AccountReceivable,
 } from "@/features/finance/finance.types";
 
+import { useSettings } from "@/features/settings/SettingsContext";
+
 interface ReceivableTableProps {
   receivables: AccountReceivable[];
   isLoading?: boolean;
   onSelect?: (receivable: AccountReceivable) => void;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR").format(
-    new Date(`${value}T00:00:00`),
-  );
-}
 
 function getStatusConfig(status: AccountReceivable["status"]) {
   switch (status) {
@@ -81,6 +71,7 @@ export function ReceivableTable({
   isLoading = false,
   onSelect,
 }: ReceivableTableProps) {
+  const { formatCurrency, formatDate } = useSettings();
   if (isLoading) {
     return (
       <>

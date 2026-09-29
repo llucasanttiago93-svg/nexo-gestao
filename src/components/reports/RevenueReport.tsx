@@ -10,36 +10,26 @@ import {
 
 import type { RevenueReportPoint } from "@/features/reports/reports.types";
 
+import { useSettings } from "@/features/settings/SettingsContext";
+
 interface RevenueReportProps {
   data: RevenueReportPoint[];
   isLoading?: boolean;
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-  }).format(new Date(`${value}T00:00:00`));
 }
 
 export function RevenueReport({
   data,
   isLoading = false,
 }: RevenueReportProps) {
+  const { formatCurrency, formatDate } = useSettings();
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="mb-5">
         <h2 className="text-base font-semibold text-slate-900">
           Faturamento
         </h2>
+
         <p className="mt-1 text-sm text-slate-500">
           Evolução das vendas no período selecionado.
         </p>
@@ -70,7 +60,9 @@ export function RevenueReport({
 
               <XAxis
                 dataKey="date"
-                tickFormatter={formatDate}
+                tickFormatter={(value) =>
+                  formatDate(String(value))
+                }
                 tickLine={false}
                 axisLine={false}
                 fontSize={12}
@@ -78,7 +70,7 @@ export function RevenueReport({
 
               <YAxis
                 tickFormatter={(value) =>
-                  formatCurrency(value)
+                  formatCurrency(Number(value))
                 }
                 tickLine={false}
                 axisLine={false}

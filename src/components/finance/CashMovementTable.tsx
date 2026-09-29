@@ -8,6 +8,8 @@ import {
 
 import type { CashMovement } from "@/features/finance/finance.types";
 
+import { useSettings } from "@/features/settings/SettingsContext";
+
 interface CashMovementTableProps {
   movements: CashMovement[];
   accounts: {
@@ -18,18 +20,6 @@ interface CashMovementTableProps {
   onSelect?: (movement: CashMovement) => void;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
-
-function formatDate(date: string) {
-  return new Intl.DateTimeFormat("pt-BR").format(
-    new Date(`${date}T00:00:00`),
-  );
-}
 
 function getAccountName(
   accountId: string,
@@ -107,6 +97,7 @@ export function CashMovementTable({
   isLoading = false,
   onSelect,
 }: CashMovementTableProps) {
+  const { formatCurrency, formatDate } = useSettings();
   if (!isLoading && movements.length === 0) {
     return <EmptyState />;
   }

@@ -1,23 +1,19 @@
 import { ArrowUpRight } from "lucide-react";
 
 import type { DashboardOrder } from "@/features/dashboard/dashboard.types";
+import { useSettings } from "@/features/settings/SettingsContext";
 
 interface RecentOrdersProps {
   orders: DashboardOrder[];
 }
 
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
-
 function formatStatus(status: string) {
   const statuses: Record<string, string> = {
     pending: "Pendente",
+    confirmed: "Confirmado",
     processing: "Processando",
     shipped: "Enviado",
+    completed: "Concluído",
     delivered: "Entregue",
     cancelled: "Cancelado",
     paid: "Pago",
@@ -29,11 +25,15 @@ function formatStatus(status: string) {
 function getStatusClass(status: string) {
   switch (status) {
     case "paid":
+    case "completed":
     case "delivered":
       return "bg-green-50 text-green-700";
 
     case "processing":
       return "bg-amber-50 text-amber-700";
+
+    case "confirmed":
+      return "bg-blue-50 text-blue-700";
 
     case "shipped":
       return "bg-blue-50 text-blue-700";
@@ -49,6 +49,8 @@ function getStatusClass(status: string) {
 export function RecentOrders({
   orders,
 }: RecentOrdersProps) {
+  const { formatCurrency, formatDate } = useSettings();
+
   return (
     <section className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white shadow-[var(--shadow-sm)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] px-5 py-4">
@@ -125,9 +127,7 @@ export function RecentOrders({
                   </td>
 
                   <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
-                    {new Date(
-                      order.createdAt,
-                    ).toLocaleDateString("pt-BR")}
+                    {formatDate(order.createdAt)}
                   </td>
 
                   <td className="px-5 py-4 text-sm font-medium text-[var(--color-text-primary)]">

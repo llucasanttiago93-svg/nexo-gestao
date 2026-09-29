@@ -9,31 +9,19 @@ import {
 } from "recharts";
 
 import type { CashFlowReportPoint } from "@/features/reports/reports.types";
+import { useSettings } from "@/features/settings/SettingsContext";
 
 interface CashFlowReportProps {
   data: CashFlowReportPoint[];
   isLoading?: boolean;
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-  }).format(new Date(`${value}T00:00:00`));
-}
-
 export function CashFlowReport({
   data,
   isLoading = false,
 }: CashFlowReportProps) {
+  const { formatCurrency, formatDate } = useSettings();
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="mb-5">
@@ -71,7 +59,9 @@ export function CashFlowReport({
 
               <XAxis
                 dataKey="date"
-                tickFormatter={formatDate}
+                tickFormatter={(value) =>
+                  formatDate(String(value))
+                }
                 tickLine={false}
                 axisLine={false}
                 fontSize={12}
@@ -79,7 +69,7 @@ export function CashFlowReport({
 
               <YAxis
                 tickFormatter={(value) =>
-                  formatCurrency(value)
+                  formatCurrency(Number(value))
                 }
                 tickLine={false}
                 axisLine={false}

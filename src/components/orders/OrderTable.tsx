@@ -1,15 +1,10 @@
 import type { Order } from "@/features/orders/orders.types";
 
+import { useSettings } from "@/features/settings/SettingsContext";
+
 interface OrderTableProps {
   orders: Order[];
   onView: (orderId: string) => void;
-}
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
 }
 
 function formatStatus(status: Order["status"]) {
@@ -66,6 +61,8 @@ export function OrderTable({
   orders,
   onView,
 }: OrderTableProps) {
+  const { formatCurrency, formatDate } = useSettings();
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[900px]">
@@ -116,9 +113,7 @@ export function OrderTable({
               </td>
 
               <td className="px-5 py-4 text-sm text-[var(--color-text-secondary)]">
-                {new Date(
-                  order.createdAt,
-                ).toLocaleDateString("pt-BR")}
+                {formatDate(order.createdAt)}
               </td>
 
               <td className="px-5 py-4 text-sm font-semibold text-[var(--color-text-primary)]">

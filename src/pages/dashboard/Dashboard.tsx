@@ -12,13 +12,7 @@ import {
 } from "lucide-react";
 
 import { useDashboardQuery } from "@/features/dashboard/dashboard.queries";
-
-function formatCurrency(value: number) {
-  return value.toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  });
-}
+import { useSettings } from "@/features/settings/SettingsContext";
 
 function calculatePercentageChange(
   current: number,
@@ -46,6 +40,8 @@ export function Dashboard() {
     isError,
     error,
   } = useDashboardQuery();
+
+  const { formatCurrency } = useSettings();
 
   if (isLoading) {
     return (

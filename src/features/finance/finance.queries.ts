@@ -4,36 +4,50 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 
-import {
-  createDefaultFinanceCategories,
-  createFinanceAccount,
-  createPayable,
-  createReceivableFromOrder,
-  getAccountsPayable,
-  getAccountsReceivable,
-  getCashFlow,
-  getCashMovements,
-  getFinanceAccount,
-  getFinanceAccounts,
-  getFinanceCategories,
-  getFinanceSummary,
-  getAccountPayable,
-  getAccountReceivable,
-  getPayableInstallments,
-  getReceivableInstallments,
-  getOrCreateDefaultFinanceAccount,
-  payPayableInstallment,
-  payReceivableInstallment,
-  transferBetweenFinanceAccounts,
-  updateFinanceAccount,
-} from "./finance.service";
-
 import type {
   CreatePayableInput,
   CreateReceivableFromOrderInput,
   PayInstallmentInput,
 } from "./finance.types";
 
+import {
+  createFinanceAccount,
+  getFinanceAccount,
+  getFinanceAccounts,
+  getOrCreateDefaultFinanceAccount,
+  updateFinanceAccount,
+} from "./services/finance.accounts.service";
+
+import {
+  createDefaultFinanceCategories,
+  getFinanceCategories,
+} from "./services/finance.categories.service";
+
+import {
+  createReceivableFromOrder,
+  getAccountReceivable,
+  getAccountsReceivable,
+  getReceivableInstallments,
+  payReceivableInstallment,
+} from "./services/finance.receivables.service";
+
+import {
+  createPayable,
+  getAccountPayable,
+  getAccountsPayable,
+  getPayableInstallments,
+  payPayableInstallment,
+} from "./services/finance.payables.service";
+
+import {
+  getCashFlow,
+  getCashMovements,
+  getFinanceSummary,
+} from "./services/finance.cash.service";
+
+import {
+  transferBetweenFinanceAccounts,
+} from "./services/finance.transfers.service";
 
 // =====================================================
 // QUERY KEYS

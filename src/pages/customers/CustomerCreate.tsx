@@ -1,7 +1,7 @@
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { CustomerForm } from "@/components/customers/CustomerForm";
+import { CustomerForm } from "@/features/customers/components/CustomerForm";
 
 import {
   useCreateCustomerMutation,

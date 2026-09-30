@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { ProductForm } from "@/components/products/ProductForm";
+import { ProductForm } from "@/features/products/components/ProductForm";
 
 import type { ProductFormData } from "@/features/products/products.schema";
 

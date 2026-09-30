@@ -1,7 +1,7 @@
 import { ArrowLeft, UserRoundPen } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { CustomerForm } from "@/components/customers/CustomerForm";
+import { CustomerForm } from "@/features/customers/components/CustomerForm";
 
 import {
   useCustomerQuery,

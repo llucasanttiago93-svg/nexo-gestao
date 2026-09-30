@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Plus } from "lucide-react";
 
-import { CustomerFilters } from "@/components/customers/CustomerFilters";
-import { CustomerMobileList } from "@/components/customers/CustomerMobileList";
-import { CustomerTable } from "@/components/customers/CustomerTable";
-import { DeleteCustomerModal } from "@/components/customers/DeleteCustomerModal";
+import { CustomerFilters } from "@/features/customers/components/CustomerFilters";
+import { CustomerMobileList } from "@/features/customers/components/CustomerMobileList";
+import { CustomerTable } from "@/features/customers/components/CustomerTable";
+import { DeleteCustomerModal } from "@/features/customers/components/DeleteCustomerModal";
 
 import {
   useCustomersQuery,

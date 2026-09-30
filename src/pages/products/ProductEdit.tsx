@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-import { ProductForm } from "@/components/products/ProductForm";
-import { DeleteProductModal } from "@/components/products/DeleteProductModal";
+import { ProductForm } from "@/features/products/components/ProductForm";
+import { DeleteProductModal } from "@/features/products/components/DeleteProductModal";
 
 import type { ProductFormData } from "@/features/products/products.schema";
 

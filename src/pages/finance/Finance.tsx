@@ -24,31 +24,31 @@ import {
 
 import { useSettings } from "@/features/settings/SettingsContext";
 
-import { CashFlowChart } from "@/components/finance/CashFlowChart";
-import { ReceivableTable } from "@/components/finance/ReceivableTable";
+import { CashFlowChart } from "@/features/finance/components/CashFlowChart";
+import { ReceivableTable } from "@/features/finance/components/ReceivableTable";
 
 import {
   ReceivableFilters,
   type ReceivableStatusFilter,
-} from "@/components/finance/ReceivableFilters";
+} from "@/features/finance/components/ReceivableFilters";
 
-import { ReceivableDetails } from "@/components/finance/ReceivableDetails";
-import { PayableTable } from "@/components/finance/PayableTable";
+import { ReceivableDetails } from "@/features/finance/components/ReceivableDetails";
+import { PayableTable } from "@/features/finance/components/PayableTable";
 
 import {
   PayableFilters,
   type PayableStatusFilter,
-} from "@/components/finance/PayableFilters";
+} from "@/features/finance/components/PayableFilters";
 
-import { PayableDetails } from "@/components/finance/PayableDetails";
-import { PayableForm } from "@/components/finance/PayableForm";
+import { PayableDetails } from "@/features/finance/components/PayableDetails";
+import { PayableForm } from "@/features/finance/components/PayableForm";
 
-import { CashMovementTable } from "@/components/finance/CashMovementTable";
+import { CashMovementTable } from "@/features/finance/components/CashMovementTable";
 
 import {
   CashMovementFilters,
   type CashMovementTypeFilter,
-} from "@/components/finance/CashMovementFilters";
+} from "@/features/finance/components/CashMovementFilters";
 
 import type {
   AccountReceivable,

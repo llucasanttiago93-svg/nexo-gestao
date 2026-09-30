@@ -14,14 +14,14 @@ import { useMemo, useState } from "react";
 
 import { useSettings } from "@/features/settings/SettingsContext";
 
-import { CashFlowReport } from "@/components/reports/CashFlowReport";
-import { CategorySalesReport } from "@/components/reports/CategorySalesReport";
-import { CustomerSalesReport } from "@/components/reports/CustomerSalesReport";
-import { PaymentMethodReport } from "@/components/reports/PaymentMethodReport";
-import { ProductSalesReport } from "@/components/reports/ProductSalesReport";
-import { ReportFilters } from "@/components/reports/ReportFilters";
-import { ReportMetricCard } from "@/components/reports/ReportMetricCard";
-import { RevenueReport } from "@/components/reports/RevenueReport";
+import { CashFlowReport } from "@/features/reports/components/CashFlowReport";
+import { CategorySalesReport } from "@/features/reports/components/CategorySalesReport";
+import { CustomerSalesReport } from "@/features/reports/components/CustomerSalesReport";
+import { PaymentMethodReport } from "@/features/reports/components/PaymentMethodReport";
+import { ProductSalesReport } from "@/features/reports/components/ProductSalesReport";
+import { ReportFilters } from "@/features/reports/components/ReportFilters";
+import { ReportMetricCard } from "@/features/reports/components/ReportMetricCard";
+import { RevenueReport } from "@/features/reports/components/RevenueReport";
 
 import {
     useCashFlowReportQuery,

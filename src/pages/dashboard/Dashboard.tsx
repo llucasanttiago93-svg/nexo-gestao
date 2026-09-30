@@ -1,8 +1,8 @@
-import { MetricCard } from "@/components/dashboard/MetricCard";
-import { SalesChart } from "@/components/dashboard/SalesChart";
-import { RevenueChart } from "@/components/dashboard/RevenueChart";
-import { RecentOrders } from "@/components/dashboard/RecentOrders";
-import { LowStockProducts } from "@/components/dashboard/LowStockProducts";
+import { MetricCard } from "@/features/dashboard/components/MetricCard";
+import { SalesChart } from "@/features/dashboard/components/SalesChart";
+import { RevenueChart } from "@/features/dashboard/components/RevenueChart";
+import { RecentOrders } from "@/features/dashboard/components/RecentOrders";
+import { LowStockProducts } from "@/features/dashboard/components/LowStockProducts";
 
 import {
   CircleDollarSign,

@@ -5,9 +5,9 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { OrderFilters } from "@/components/orders/OrderFilters";
-import { OrderMobileList } from "@/components/orders/OrderMobileList";
-import { OrderTable } from "@/components/orders/OrderTable";
+import { OrderFilters } from "@/features/orders/components/OrderFilters";
+import { OrderMobileList } from "@/features/orders/components/OrderMobileList";
+import { OrderTable } from "@/features/orders/components/OrderTable";
 import { Pagination } from "@/components/ui/Pagination";
 
 import { useDebounce } from "@/hooks/useDebounce";

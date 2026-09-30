@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Plus, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-import { ProductFilters } from "@/components/products/ProductFilters";
-import { ProductMobileList } from "@/components/products/ProductMobileList";
-import { ProductTable } from "@/components/products/ProductTable";
+import { ProductFilters } from "@/features/products/components/ProductFilters";
+import { ProductMobileList } from "@/features/products/components/ProductMobileList";
+import { ProductTable } from "@/features/products/components/ProductTable";
 import { Pagination } from "@/components/ui/Pagination";
 
 import { useDebounce } from "@/hooks/useDebounce";

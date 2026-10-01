@@ -6,7 +6,7 @@ import {
   getCompanyProfile,
   saveCompanyPreferences,
   saveCompanyProfile,
-} from "./settings.service";
+} from "./services/settings.service";
 
 import type {
   CompanyPreferencesFormData,

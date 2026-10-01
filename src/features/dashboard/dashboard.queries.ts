@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { getDashboardData } from "@/features/dashboard/dashboard.service";
+import { getDashboardData } from "@/features/dashboard/services/dashboard.service";
 
 export const dashboardQueryKeys = {
   all: ["dashboard"] as const,

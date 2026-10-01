@@ -10,7 +10,7 @@ import {
   getProductSalesReport,
   getReportSummary,
   getRevenueReport,
-} from "./reports.service";
+} from "./services/reports.service";
 
 import type { ReportFilters } from "./reports.types";
 

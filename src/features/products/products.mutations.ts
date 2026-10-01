@@ -4,7 +4,7 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
-} from "@/features/products/products.service";
+} from "@/features/products/services/products.service";
 
 import type { ProductFormData } from "@/features/products/products.schema";
 

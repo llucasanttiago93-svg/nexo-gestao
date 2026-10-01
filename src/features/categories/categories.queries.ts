@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { getProductCategories } from "@/features/categories/categories.service";
+import { getProductCategories } from "@/features/categories/services/categories.service";
 
 export const categoriesQueryKeys = {
   all: ["categories"] as const,

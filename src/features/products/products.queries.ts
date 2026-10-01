@@ -4,7 +4,7 @@ import {
   getProduct,
   getProducts,
   type GetProductsParams,
-} from "@/features/products/products.service";
+} from "@/features/products/services/products.service";
 
 export const productsQueryKeys = {
   all: ["products"] as const,

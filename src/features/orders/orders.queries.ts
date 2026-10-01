@@ -6,14 +6,17 @@ import {
 import { queryClient } from "@/lib/queryClient";
 
 import {
-  createOrder,
   getOrder,
   getOrderCreateData,
   getOrderDetails,
   getOrders,
+} from "@/features/orders/services/orders.read.service";
+
+import {
+  createOrder,
   updateOrderPaymentStatus,
   updateOrderStatus,
-} from "@/features/orders/orders.service";
+} from "@/features/orders/services/orders.write.service";
 
 import type {
   GetOrdersParams,
@@ -137,7 +140,9 @@ export function useUpdateOrderStatusMutation() {
 
     onSuccess: (_, variables) => {
       void queryClient.invalidateQueries({
-        queryKey: ordersQueryKeys.detail(variables.orderId),
+        queryKey: ordersQueryKeys.detail(
+          variables.orderId,
+        ),
       });
 
       void queryClient.invalidateQueries({
@@ -163,11 +168,17 @@ export function useUpdateOrderPaymentStatusMutation() {
     }: {
       orderId: string;
       paymentStatus: PaymentStatus;
-    }) => updateOrderPaymentStatus(orderId, paymentStatus),
+    }) =>
+      updateOrderPaymentStatus(
+        orderId,
+        paymentStatus,
+      ),
 
     onSuccess: (_, variables) => {
       void queryClient.invalidateQueries({
-        queryKey: ordersQueryKeys.detail(variables.orderId),
+        queryKey: ordersQueryKeys.detail(
+          variables.orderId,
+        ),
       });
 
       void queryClient.invalidateQueries({

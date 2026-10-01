@@ -11,7 +11,7 @@ import {
   getCustomer,
   getCustomers,
   updateCustomer,
-} from "@/features/customers/customers.service";
+} from "@/features/customers/services/customers.service";
 
 import type {
   CustomerInput,

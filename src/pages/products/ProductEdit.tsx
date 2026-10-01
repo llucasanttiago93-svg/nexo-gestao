@@ -6,7 +6,7 @@ import { DeleteProductModal } from "@/features/products/components/DeleteProduct
 
 import type { ProductFormData } from "@/features/products/products.schema";
 
-import { getProduct } from "@/features/products/products.service";
+import { getProduct } from "@/features/products/services/products.service";
 
 import { useUpdateProductMutation } from "@/features/products/products.mutations";
 

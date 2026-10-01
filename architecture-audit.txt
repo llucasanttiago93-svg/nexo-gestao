@@ -1,0 +1,2692 @@
+
+============================================================
+FILE: .\src\features\categories\categories.service.ts
+============================================================
+import { supabase } from "@/lib/supabase";
+
+import type { Category } from "@/features/categories/categories.types";
+
+async function getCurrentUserId() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    throw new Error(
+      "Não foi possível verificar o usuário autenticado.",
+    );
+  }
+
+  if (!user) {
+    throw new Error(
+      "Você precisa estar autenticado para acessar as categorias.",
+    );
+  }
+
+  return user.id;
+}
+
+export async function getProductCategories(): Promise<Category[]> {
+  const userId = await getCurrentUserId();
+
+  const { data, error } = await supabase
+    .from("categories")
+    .select("id, name, type, created_at")
+    .eq("user_id", userId)
+    .eq("type", "product")
+    .order("name", { ascending: true });
+
+  if (error) {
+    throw new Error(
+      `Não foi possível carregar as categorias: ${error.message}`,
+    );
+  }
+
+  return (data ?? []).map((category) => ({
+    id: category.id,
+    name: category.name,
+    type: category.type,
+    createdAt: category.created_at,
+  }));
+}
+
+============================================================
+FILE: .\src\features\categories\categories.queries.ts
+============================================================
+import { useQuery } from "@tanstack/react-query";
+
+import { getProductCategories } from "@/features/categories/categories.service";
+
+export const categoriesQueryKeys = {
+  all: ["categories"] as const,
+
+  products: () =>
+    [...categoriesQueryKeys.all, "products"] as const,
+};
+
+export function useProductCategoriesQuery() {
+  return useQuery({
+    queryKey: categoriesQueryKeys.products(),
+    queryFn: getProductCategories,
+  });
+}
+
+============================================================
+FILE: .\src\features\customers\customers.service.ts
+============================================================
+import { supabase } from "@/lib/supabase";
+
+import type {
+  Customer,
+  CustomerInput,
+  CustomersResult,
+  GetCustomersParams,
+} from "@/features/customers/customers.types";
+
+const DEFAULT_PAGE_SIZE = 10;
+
+async function getCurrentUserId() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  return user.id;
+}
+
+function mapCustomer(row: any): Customer {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    document: row.document,
+    address: row.address,
+    number: row.number,
+    complement: row.complement,
+    neighborhood: row.neighborhood,
+    city: row.city,
+    state: row.state,
+    zipCode: row.zip_code,
+    notes: row.notes,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export async function getCustomers(
+  params: GetCustomersParams = {},
+): Promise<CustomersResult> {
+  const userId = await getCurrentUserId();
+
+  const page = Math.max(params.page ?? 1, 1);
+  const pageSize = Math.max(
+    params.pageSize ?? DEFAULT_PAGE_SIZE,
+    1,
+  );
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from("customers")
+    .select("*", { count: "exact" })
+    .eq("user_id", userId)
+    .order("created_at", {
+      ascending: false,
+    })
+    .range(from, to);
+
+  const search = params.search?.trim();
+
+  if (search) {
+    const escapedSearch = search
+      .replace(/\\/g, "\\\\")
+      .replace(/%/g, "\\%")
+      .replace(/,/g, "\\,");
+
+    query = query.or(
+      `name.ilike.%${escapedSearch}%,email.ilike.%${escapedSearch}%,phone.ilike.%${escapedSearch}%,document.ilike.%${escapedSearch}%`,
+    );
+  }
+
+  const {
+    data,
+    error,
+    count,
+  } = await query;
+
+  if (error) {
+    throw new Error(
+      `Não foi possível carregar os clientes: ${error.message}`,
+    );
+  }
+
+  const total = count ?? 0;
+
+  return {
+    customers: (data ?? []).map(mapCustomer),
+    total,
+    page,
+    pageSize,
+    totalPages:
+      total === 0
+        ? 1
+        : Math.ceil(total / pageSize),
+  };
+}
+
+export async function getCustomer(
+  customerId: string,
+): Promise<Customer> {
+  const userId = await getCurrentUserId();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("customers")
+    .select("*")
+    .eq("id", customerId)
+    .eq("user_id", userId)
+    .single();
+
+  if (error) {
+    throw new Error(
+      `Não foi possível carregar o cliente: ${error.message}`,
+    );
+  }
+
+  return mapCustomer(data);
+}
+
+export async function createCustomer(
+  input: CustomerInput,
+): Promise<Customer> {
+  const userId = await getCurrentUserId();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("customers")
+    .insert({
+      user_id: userId,
+      name: input.name.trim(),
+      email: input.email.trim() || null,
+      phone: input.phone.trim() || null,
+      document: input.document.trim() || null,
+      address: input.address.trim() || null,
+      number: input.number.trim() || null,
+      complement:
+        input.complement.trim() || null,
+      neighborhood:
+        input.neighborhood.trim() || null,
+      city: input.city.trim() || null,
+      state: input.state.trim() || null,
+      zip_code: input.zipCode.trim() || null,
+      notes: input.notes.trim() || null,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(
+      `Não foi possível cadastrar o cliente: ${error.message}`,
+    );
+  }
+
+  return mapCustomer(data);
+}
+
+export async function updateCustomer(
+  customerId: string,
+  input: CustomerInput,
+): Promise<Customer> {
+  const userId = await getCurrentUserId();
+
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("customers")
+    .update({
+      name: input.name.trim(),
+      email: input.email.trim() || null,
+      phone: input.phone.trim() || null,
+      document: input.document.trim() || null,
+      address: input.address.trim() || null,
+      number: input.number.trim() || null,
+      complement:
+        input.complement.trim() || null,
+      neighborhood:
+        input.neighborhood.trim() || null,
+      city: input.city.trim() || null,
+      state: input.state.trim() || null,
+      zip_code: input.zipCode.trim() || null,
+      notes: input.notes.trim() || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", customerId)
+    .eq("user_id", userId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(
+      `Não foi possível atualizar o cliente: ${error.message}`,
+    );
+  }
+
+  return mapCustomer(data);
+}
+
+export async function deleteCustomer(
+  customerId: string,
+): Promise<void> {
+  const userId = await getCurrentUserId();
+
+  const {
+    count,
+    error: countError,
+  } = await supabase
+    .from("orders")
+    .select("id", {
+      count: "exact",
+      head: true,
+    })
+    .eq("customer_id", customerId)
+    .eq("user_id", userId);
+
+  if (countError) {
+    throw new Error(
+      `Não foi possível verificar os pedidos do cliente: ${countError.message}`,
+    );
+  }
+
+  if ((count ?? 0) > 0) {
+    throw new Error(
+      "Este cliente possui pedidos vinculados e não pode ser excluído.",
+    );
+  }
+
+  const {
+    error,
+  } = await supabase
+    .from("customers")
+    .delete()
+    .eq("id", customerId)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(
+      `Não foi possível excluir o cliente: ${error.message}`,
+    );
+  }
+}
+
+============================================================
+FILE: .\src\features\customers\customers.queries.ts
+============================================================
+import {
+  useMutation,
+  useQuery,
+} from "@tanstack/react-query";
+
+import { queryClient } from "@/lib/queryClient";
+
+import {
+  createCustomer,
+  deleteCustomer,
+  getCustomer,
+  getCustomers,
+  updateCustomer,
+} from "@/features/customers/customers.service";
+
+import type {
+  CustomerInput,
+  GetCustomersParams,
+} from "@/features/customers/customers.types";
+
+export const customersQueryKeys = {
+  all: ["customers"] as const,
+
+  list: (filters?: GetCustomersParams) =>
+    [
+      ...customersQueryKeys.all,
+      "list",
+      filters ?? {},
+    ] as const,
+
+  detail: (id: string) =>
+    [
+      ...customersQueryKeys.all,
+      "detail",
+      id,
+    ] as const,
+};
+
+export function useCustomersQuery(
+  params: GetCustomersParams = {},
+) {
+  return useQuery({
+    queryKey: customersQueryKeys.list(params),
+    queryFn: () => getCustomers(params),
+    placeholderData: (previousData) =>
+      previousData,
+  });
+}
+
+export function useCustomerQuery(
+  id: string | undefined,
+) {
+  return useQuery({
+    queryKey: customersQueryKeys.detail(
+      id ?? "",
+    ),
+    queryFn: () => getCustomer(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCreateCustomerMutation() {
+  return useMutation({
+    mutationFn: (input: CustomerInput) =>
+      createCustomer(input),
+
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: customersQueryKeys.all,
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+    },
+  });
+}
+
+export function useUpdateCustomerMutation() {
+  return useMutation({
+    mutationFn: ({
+      customerId,
+      input,
+    }: {
+      customerId: string;
+      input: CustomerInput;
+    }) =>
+      updateCustomer(customerId, input),
+
+    onSuccess: async (_, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: customersQueryKeys.all,
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey:
+          customersQueryKeys.detail(
+            variables.customerId,
+          ),
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+    },
+  });
+}
+
+export function useDeleteCustomerMutation() {
+  return useMutation({
+    mutationFn: (customerId: string) =>
+      deleteCustomer(customerId),
+
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: customersQueryKeys.all,
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: ["dashboard"],
+      });
+    },
+  });
+}
+
+============================================================
+FILE: .\src\features\dashboard\dashboard.service.ts
+============================================================
+import { supabase } from "@/lib/supabase";
+
+import type {
+    DashboardData,
+    DashboardMetrics,
+    DashboardChartItem,
+    DashboardOrder,
+    DashboardProduct,
+} from "@/features/dashboard/dashboard.types";
+
+function getMonthRange(offset: number) {
+    const now = new Date();
+
+    const start = new Date(
+        now.getFullYear(),
+        now.getMonth() + offset,
+        1,
+    );
+
+    const end = new Date(
+        now.getFullYear(),
+        now.getMonth() + offset + 1,
+        1,
+    );
+
+    return {
+        start: start.toISOString(),
+        end: end.toISOString(),
+    };
+}
+
+async function getCurrentUserId() {
+    const {
+        data: { user },
+        error,
+    } = await supabase.auth.getUser();
+
+    if (error || !user) {
+        throw new Error("Usuário não autenticado.");
+    }
+
+    return user.id;
+}
+
+async function getOrderMetrics(
+    userId: string,
+    offset: number,
+) {
+    const { start, end } = getMonthRange(offset);
+
+    const { data, error } = await supabase
+        .from("orders")
+        .select("id, total")
+        .eq("user_id", userId)
+        .gte("created_at", start)
+        .lt("created_at", end);
+
+    if (error) {
+        throw new Error(
+            `Não foi possível carregar os pedidos: ${error.message}`,
+        );
+    }
+
+    const orders = data ?? [];
+
+    const revenue = orders.reduce(
+        (sum, order) => sum + Number(order.total),
+        0,
+    );
+
+    const orderCount = orders.length;
+
+    return {
+        revenue,
+        orders: orderCount,
+        averageTicket:
+            orderCount > 0 ? revenue / orderCount : 0,
+    };
+}
+
+async function getCustomerCount(userId: string) {
+    const { count, error } = await supabase
+        .from("customers")
+        .select("id", {
+            count: "exact",
+            head: true,
+        })
+        .eq("user_id", userId);
+
+    if (error) {
+        throw new Error(
+            `Não foi possível carregar os clientes: ${error.message}`,
+        );
+    }
+
+    return count ?? 0;
+}
+
+async function getChartData(
+    userId: string,
+): Promise<DashboardChartItem[]> {
+    const months = Array.from({ length: 6 }, (_, index) => {
+        return -5 + index;
+    });
+
+    const results = await Promise.all(
+        months.map(async (offset) => {
+            const { start, end } = getMonthRange(offset);
+
+            const { data, error } = await supabase
+                .from("orders")
+                .select("total")
+                .eq("user_id", userId)
+                .gte("created_at", start)
+                .lt("created_at", end);
+
+            if (error) {
+                throw new Error(
+                    `Não foi possível carregar o gráfico: ${error.message}`,
+                );
+            }
+
+            const orders = data ?? [];
+
+            return {
+                month: new Date(start).toLocaleDateString(
+                    "pt-BR",
+                    { month: "short" },
+                ),
+                revenue: orders.reduce(
+                    (sum, order) => sum + Number(order.total),
+                    0,
+                ),
+                orders: orders.length,
+            };
+        }),
+    );
+
+    return results;
+}
+
+async function getRecentOrders(
+    userId: string,
+): Promise<DashboardOrder[]> {
+    const { data, error } = await supabase
+        .from("orders")
+        .select(`
+      id,
+      order_number,
+      total,
+      status,
+      created_at,
+      customers (
+        name
+      )
+    `)
+        .eq("user_id", userId)
+        .order("created_at", {
+            ascending: false,
+        })
+        .limit(5);
+
+    if (error) {
+        throw new Error(
+            `Não foi possível carregar os pedidos recentes: ${error.message}`,
+        );
+    }
+
+    return (data ?? []).map((order) => {
+        const customer = Array.isArray(order.customers)
+            ? order.customers[0]
+            : order.customers;
+
+        return {
+            id: order.id,
+            orderNumber: order.order_number,
+            customerName: customer?.name ?? "Cliente",
+            total: Number(order.total),
+            status: order.status,
+            createdAt: order.created_at,
+        };
+    });
+}
+
+async function getLowStockProducts(
+    userId: string,
+): Promise<DashboardProduct[]> {
+    const { data, error } = await supabase
+        .from("products")
+        .select("id, name, stock, min_stock")
+        .eq("user_id", userId)
+        .order("stock", {
+            ascending: true,
+        })
+        .limit(10);
+
+    if (error) {
+        throw new Error(
+            `Não foi possível carregar o estoque: ${error.message}`,
+        );
+    }
+
+    return (data ?? [])
+        .filter(
+            (product) => product.stock <= product.min_stock,
+        )
+        .map((product) => ({
+            id: product.id,
+            name: product.name,
+            stock: product.stock,
+            minStock: product.min_stock,
+        }));
+}
+
+export async function getDashboardData(): Promise<DashboardData> {
+    const userId = await getCurrentUserId();
+
+    const [
+        currentOrders,
+        previousOrders,
+        customers,
+        chart,
+        recentOrders,
+        lowStockProducts,
+    ] = await Promise.all([
+        getOrderMetrics(userId, 0),
+        getOrderMetrics(userId, -1),
+        getCustomerCount(userId),
+        getChartData(userId),
+        getRecentOrders(userId),
+        getLowStockProducts(userId),
+    ]);
+
+    const metrics: DashboardMetrics = {
+        revenue: currentOrders.revenue,
+        orders: currentOrders.orders,
+        customers,
+        averageTicket: currentOrders.averageTicket,
+
+        previousRevenue: previousOrders.revenue,
+        previousOrders: previousOrders.orders,
+        previousCustomers: customers,
+        previousAverageTicket:
+            previousOrders.averageTicket,
+    };
+
+    return {
+        metrics,
+        chart,
+        recentOrders,
+        lowStockProducts,
+    };
+}
+
+============================================================
+FILE: .\src\features\dashboard\dashboard.queries.ts
+============================================================
+import { useQuery } from "@tanstack/react-query";
+
+import { getDashboardData } from "@/features/dashboard/dashboard.service";
+
+export const dashboardQueryKeys = {
+  all: ["dashboard"] as const,
+};
+
+export function useDashboardQuery() {
+  return useQuery({
+    queryKey: dashboardQueryKeys.all,
+    queryFn: getDashboardData,
+    staleTime: 30_000,
+  });
+}
+
+============================================================
+FILE: .\src\features\products\products.service.ts
+============================================================
+import { supabase } from "@/lib/supabase";
+
+import type { Product } from "@/features/products/products.types";
+import type { ProductFormData } from "@/features/products/products.schema";
+
+export interface GetProductsParams {
+  search?: string;
+  categoryId?: string;
+  status?: "active" | "inactive" | "all";
+  page?: number;
+  pageSize?: number;
+}
+
+export interface ProductsResult {
+  products: Product[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+interface ProductRow {
+  id: string;
+  name: string;
+  sku: string;
+  category_id: string;
+  price: number;
+  cost_price: number;
+  stock: number;
+  min_stock: number;
+  status: "active" | "inactive";
+  created_at: string;
+  categories:
+    | {
+        name: string;
+      }
+    | {
+        name: string;
+      }[]
+    | null;
+}
+
+function getCategoryName(
+  categories: ProductRow["categories"],
+) {
+  if (!categories) {
+    return "";
+  }
+
+  if (Array.isArray(categories)) {
+    return categories[0]?.name ?? "";
+  }
+
+  return categories.name;
+}
+
+function mapProduct(row: ProductRow): Product {
+  return {
+    id: row.id,
+    name: row.name,
+    sku: row.sku,
+    categoryId: row.category_id,
+    category: getCategoryName(row.categories),
+    price: Number(row.price),
+    costPrice: Number(row.cost_price),
+    stock: row.stock,
+    minStock: row.min_stock,
+    status: row.status,
+    createdAt: row.created_at,
+  };
+}
+
+async function getCurrentUserId() {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    throw new Error(
+      "Não foi possível verificar o usuário autenticado.",
+    );
+  }
+
+  if (!user) {
+    throw new Error(
+      "Você precisa estar autenticado para acessar os produtos.",
+    );
+  }
+
+  return user.id;
+}
+
+const productSelect = `
+  id,
+  name,
+  sku,
+  category_id,
+  price,
+  cost_price,
+  stock,
+  min_stock,
+  status,
+  created_at,
+  categories (
+    name
+  )
+`;
+
+export async function getProducts(
+  params: GetProductsParams = {},
+): Promise<ProductsResult> {
+  const userId = await getCurrentUserId();
+
+  const page = Math.max(params.page ?? 1, 1);
+  const pageSize = Math.max(params.pageSize ?? 10, 1);
+
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from("products")
+    .select(productSelect, {
+      count: "exact",
+    })
+    .eq("user_id", userId);
+
+  if (params.search?.trim()) {
+    const search = params.search.trim();
+
+    query = query.or(
+      `name.ilike.%${search}%,sku.ilike.%${search}%`,
+    );
+  }
+
+  if (params.categoryId) {
+    query = query.eq("category_id", params.categoryId);
+  }
+
+  if (params.status && params.status !== "all") {
+    query = query.eq("status", params.status);
+  }
+
+  const { data, error, count } = await query
+    .order("created_at", {
+      ascending: false,
+    })
+    .range(from, to);
+
+  if (error) {
+    throw new Error(
+      `Não foi possível carregar os produtos: ${error.message}`,
+    );
+  }
+
+  const total = count ?? 0;
+
+  return {
+    products: (data ?? []).map((row) =>
+      mapProduct(row as unknown as ProductRow),
+    ),
+    total,
+    page,
+    pageSize,
+    totalPages: Math.max(
+      Math.ceil(total / pageSize),
+      1,
+    ),
+  };
+}
+
+export async function getProduct(
+  productId: string,
+): Promise<Product> {
+  const userId = await getCurrentUserId();
+
+  const { data, error } = await supabase
+    .from("products")
+    .select(productSelect)
+    .eq("id", productId)
+    .eq("user_id", userId)
+    .single();
+
+  if (error) {
+    throw new Error(
+      `Não foi possível carregar o produto: ${error.message}`,
+    );
+  }
+
+  return mapProduct(
+    data as unknown as ProductRow,
+  );
+}
+
+export async function createProduct(
+  product: ProductFormData,
+): Promise<Product> {
+  const userId = await getCurrentUserId();
+
+  const { data, error } = await supabase
+    .from("products")
+    .insert({
+      user_id: userId,
+      name: product.name.trim(),
+      sku: product.sku.trim(),
+      category_id: product.categoryId,
+      price: product.price,
+      cost_price: product.costPrice,
+      stock: product.stock,
+      min_stock: product.minStock,
+      status: product.status,
+    })
+    .select(productSelect)
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error(
+        "Já existe um produto com esse SKU.",
+      );
+    }
+
+    throw new Error(
+      `Não foi possível criar o produto: ${error.message}`,
+    );
+  }
+
+  return mapProduct(
+    data as unknown as ProductRow,
+  );
+}
+
+export async function updateProduct(
+  productId: string,
+  product: ProductFormData,
+): Promise<Product> {
+  const userId = await getCurrentUserId();
+
+  const { data, error } = await supabase
+    .from("products")
+    .update({
+      name: product.name.trim(),
+      sku: product.sku.trim(),
+      category_id: product.categoryId,
+      price: product.price,
+      cost_price: product.costPrice,
+      stock: product.stock,
+      min_stock: product.minStock,
+      status: product.status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", productId)
+    .eq("user_id", userId)
+    .select(productSelect)
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      throw new Error(
+        "Já existe outro produto com esse SKU.",
+      );
+    }
+
+    throw new Error(
+      `Não foi possível atualizar o produto: ${error.message}`,
+    );
+  }
+
+  return mapProduct(
+    data as unknown as ProductRow,
+  );
+}
+
+export async function deleteProduct(
+  productId: string,
+): Promise<void> {
+  const userId = await getCurrentUserId();
+
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", productId)
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(
+      `Não foi possível excluir o produto: ${error.message}`,
+    );
+  }
+}
+
+============================================================
+FILE: .\src\features\products\products.queries.ts
+============================================================
+import { useQuery } from "@tanstack/react-query";
+
+import {
+  getProduct,
+  getProducts,
+  type GetProductsParams,
+} from "@/features/products/products.service";
+
+export const productsQueryKeys = {
+  all: ["products"] as const,
+
+  list: (filters?: GetProductsParams) =>
+    [...productsQueryKeys.all, "list", filters ?? {}] as const,
+
+  detail: (id: string) =>
+    [...productsQueryKeys.all, "detail", id] as const,
+};
+
+export function useProductsQuery(
+  params: GetProductsParams = {},
+) {
+  return useQuery({
+    queryKey: productsQueryKeys.list(params),
+    queryFn: () => getProducts(params),
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useProductQuery(id: string | undefined) {
+  return useQuery({
+    queryKey: productsQueryKeys.detail(id ?? ""),
+    queryFn: () => getProduct(id as string),
+    enabled: Boolean(id),
+  });
+}
+
+============================================================
+FILE: .\src\features\products\products.mutations.ts
+============================================================
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import {
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from "@/features/products/products.service";
+
+import type { ProductFormData } from "@/features/products/products.schema";
+
+import { productsQueryKeys } from "@/features/products/products.queries";
+
+export function useCreateProductMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (product: ProductFormData) => {
+      return createProduct(product);
+    },
+
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.all,
+      });
+    },
+  });
+}
+
+export function useUpdateProductMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      productId,
+      product,
+    }: {
+      productId: string;
+      product: ProductFormData;
+    }) => {
+      return updateProduct(productId, product);
+    },
+
+    onSuccess: async (_updatedProduct, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.all,
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.detail(variables.productId),
+      });
+    },
+  });
+}
+
+export function useDeleteProductMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (productId: string) => {
+      return deleteProduct(productId);
+    },
+
+    onSuccess: async (_data, productId) => {
+      await queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.all,
+      });
+
+      await queryClient.invalidateQueries({
+        queryKey: productsQueryKeys.detail(productId),
+      });
+    },
+  });
+}
+
+============================================================
+FILE: .\src\features\reports\reports.service.ts
+============================================================
+import { supabase } from "@/lib/supabase";
+
+import type {
+  CategorySalesReport,
+  CashFlowReportPoint,
+  CustomerSalesReport,
+  DreReport,
+  PaymentMethodReport,
+  ReportFilters,
+  ReportPeriod,
+  ReportSummary,
+  RevenueReportPoint,
+  ProductSalesReport,
+} from "./reports.types";
+
+interface OrderRow {
+  id: string;
+  customer_id: string | null;
+  payment_method: string | null;
+  total: number | string;
+  discount: number | string;
+  shipping: number | string;
+  created_at: string;
+  status: string;
+  payment_status: string;
+}
+
+interface ReceivableRow {
+  id: string;
+  order_id: string | null;
+  total_amount: number | string;
+  status: string;
+}
+
+interface ReceivableInstallmentRow {
+  receivable_id: string;
+  amount: number | string;
+  paid_amount: number | string;
+  status: string;
+}
+
+interface OrderItemRow {
+  order_id: string;
+  product_id: string | null;
+  product_name: string;
+  sku: string | null;
+  quantity: number;
+  unit_price: number | string;
+  total_price: number | string;
+}
+
+interface CustomerRow {
+  id: string;
+  name: string;
+}
+
+function toNumber(value: number | string | null | undefined) {
+  return Number(value ?? 0);
+}
+
+function formatDate(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function getDateRange(filters: ReportFilters) {
+  const start = filters.startDate;
+  const end = filters.endDate;
+
+  return {
+    start,
+    end,
+  };
+}
+
+async function getOrders(filters: ReportFilters) {
+  let query = supabase
+    .from("orders")
+    .select(
+      `
+        id,
+        customer_id,
+        payment_method,
+        total,
+        discount,
+        shipping,
+        created_at,
+        status,
+        payment_status
+      `,
+    )
+    .gte("created_at", `${filters.startDate}T00:00:00`)
+    .lte("created_at", `${filters.endDate}T23:59:59`)
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: true });
+
+  if (filters.customerId) {
+    query = query.eq("customer_id", filters.customerId);
+  }
+
+  if (filters.paymentMethod) {
+    query = query.eq("payment_method", filters.paymentMethod);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as OrderRow[];
+}
+
+async function getOrderPaymentTotals(orderIds: string[]) {
+  if (orderIds.length === 0) {
+    return new Map<
+      string,
+      { received: number; receivable: number }
+    >();
+  }
+
+  const { data: receivables, error: receivableError } =
+    await supabase
+      .from("accounts_receivable")
+      .select(
+        `
+          id,
+          order_id,
+          total_amount,
+          status
+        `,
+      )
+      .in("order_id", orderIds);
+
+  if (receivableError) {
+    throw receivableError;
+  }
+
+  const rows = (receivables ?? []) as ReceivableRow[];
+
+  if (rows.length === 0) {
+    return new Map<
+      string,
+      { received: number; receivable: number }
+    >();
+  }
+
+  const receivableIds = rows.map(
+    (receivable) => receivable.id,
+  );
+
+  const { data: installments, error: installmentError } =
+    await supabase
+      .from("accounts_receivable_installments")
+      .select(
+        `
+          receivable_id,
+          amount,
+          paid_amount,
+          status
+        `,
+      )
+      .in("receivable_id", receivableIds);
+
+  if (installmentError) {
+    throw installmentError;
+  }
+
+  const installmentRows =
+    (installments ?? []) as ReceivableInstallmentRow[];
+
+  const installmentsByReceivable = new Map<
+    string,
+    ReceivableInstallmentRow[]
+  >();
+
+  for (const installment of installmentRows) {
+    const current =
+      installmentsByReceivable.get(
+        installment.receivable_id,
+      ) ?? [];
+
+    current.push(installment);
+    installmentsByReceivable.set(
+      installment.receivable_id,
+      current,
+    );
+  }
+
+  const totals = new Map<
+    string,
+    { received: number; receivable: number }
+  >();
+
+  for (const receivable of rows) {
+    if (!receivable.order_id) {
+      continue;
+    }
+
+    if (
+      receivable.status === "cancelled" ||
+      receivable.status === "refunded"
+    ) {
+      continue;
+    }
+
+    const installmentRowsForReceivable =
+      installmentsByReceivable.get(receivable.id) ?? [];
+
+    const received = installmentRowsForReceivable.reduce(
+      (total, installment) =>
+        total + toNumber(installment.paid_amount),
+      0,
+    );
+
+    const installmentTotal =
+      installmentRowsForReceivable.length > 0
+        ? installmentRowsForReceivable.reduce(
+            (total, installment) =>
+              total + toNumber(installment.amount),
+            0,
+          )
+        : toNumber(receivable.total_amount);
+
+    const receivableAmount = Math.max(
+      installmentTotal - received,
+      0,
+    );
+
+    const current = totals.get(receivable.order_id) ?? {
+      received: 0,
+      receivable: 0,
+    };
+
+    current.received += received;
+    current.receivable += receivableAmount;
+
+    totals.set(receivable.order_id, current);
+  }
+
+  return totals;
+}
+
+async function getOrderItems(orderIds: string[]) {
+  if (orderIds.length === 0) {
+    return [] as OrderItemRow[];
+  }
+
+  const { data, error } = await supabase
+    .from("order_items")
+    .select(
+      `
+        order_id,
+        product_id,
+        product_name,
+        sku,
+        quantity,
+        unit_price,
+        total_price
+      `,
+    )
+    .in("order_id", orderIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as OrderItemRow[];
+}
+
+async function getCustomers(customerIds: string[]) {
+  if (customerIds.length === 0) {
+    return [] as CustomerRow[];
+  }
+
+  const { data, error } = await supabase
+    .from("customers")
+    .select("id, name")
+    .in("id", customerIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as CustomerRow[];
+}
+
+export async function getReportSummary(
+  filters: ReportFilters,
+): Promise<ReportSummary> {
+  const orders = await getOrders(filters);
+
+  const revenue = orders.reduce(
+    (total, order) => total + toNumber(order.total),
+    0,
+  );
+
+  const paymentTotals = await getOrderPaymentTotals(
+    orders.map((order) => order.id),
+  );
+
+  const received = orders.reduce(
+    (total, order) =>
+      total +
+      (paymentTotals.get(order.id)?.received ?? 0),
+    0,
+  );
+
+  const receivable = orders.reduce(
+    (total, order) =>
+      total +
+      (paymentTotals.get(order.id)?.receivable ?? 0),
+    0,
+  );
+
+  const { data: payableData, error: payableError } =
+    await supabase
+      .from("accounts_payable")
+      .select("total_amount, status")
+      .gte("created_at", `${filters.startDate}T00:00:00`)
+      .lte("created_at", `${filters.endDate}T23:59:59`);
+
+  if (payableError) {
+    throw payableError;
+  }
+
+  const payables = payableData ?? [];
+
+  const expenses = payables.reduce(
+    (total, item) => total + toNumber(item.total_amount),
+    0,
+  );
+
+  const paidExpenses = payables
+    .filter((item) => item.status === "paid")
+    .reduce(
+      (total, item) => total + toNumber(item.total_amount),
+      0,
+    );
+
+  const payable = payables
+    .filter(
+      (item) =>
+        item.status !== "paid" &&
+        item.status !== "cancelled",
+    )
+    .reduce(
+      (total, item) => total + toNumber(item.total_amount),
+      0,
+    );
+
+  return {
+    revenue,
+    received,
+    receivable,
+    expenses,
+    paidExpenses,
+    payable,
+    result: received - paidExpenses,
+  };
+}
+
+export async function getRevenueReport(
+  filters: ReportFilters,
+): Promise<RevenueReportPoint[]> {
+  const orders = await getOrders(filters);
+
+  const paymentTotals = await getOrderPaymentTotals(
+    orders.map((order) => order.id),
+  );
+
+  const grouped = new Map<string, RevenueReportPoint>();
+
+  for (const order of orders) {
+    const date = order.created_at.slice(0, 10);
+
+    const total = toNumber(order.total);
+
+    const received =
+      paymentTotals.get(order.id)?.received ?? 0;
+
+    const current = grouped.get(date) ?? {
+      date,
+      revenue: 0,
+      received: 0,
+      orders: 0,
+    };
+
+    current.revenue += total;
+    current.received += received;
+    current.orders += 1;
+
+    grouped.set(date, current);
+  }
+
+  return Array.from(grouped.values()).sort((a, b) =>
+    a.date.localeCompare(b.date),
+  );
+}
+
+export async function getCashFlowReport(
+  filters: ReportFilters,
+): Promise<CashFlowReportPoint[]> {
+  const { data, error } = await supabase
+    .from("cash_movements")
+    .select(
+      `
+        movement_date,
+        type,
+        amount,
+        transfer_id
+      `,
+    )
+    .gte("movement_date", filters.startDate)
+    .lte("movement_date", filters.endDate)
+    .eq("status", "completed")
+    .is("transfer_id", null)
+    .order("movement_date", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  const grouped = new Map<
+    string,
+    CashFlowReportPoint
+  >();
+
+  for (const movement of data ?? []) {
+    const date = movement.movement_date;
+
+    const current = grouped.get(date) ?? {
+      date,
+      income: 0,
+      expense: 0,
+      balance: 0,
+    };
+
+    const amount = toNumber(movement.amount);
+
+    if (movement.type === "income") {
+      current.income += amount;
+    } else {
+      current.expense += amount;
+    }
+
+    grouped.set(date, current);
+  }
+
+  let balance = 0;
+
+  return Array.from(grouped.values())
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((item) => {
+      balance += item.income - item.expense;
+
+      return {
+        ...item,
+        balance,
+      };
+    });
+}
+
+export async function getProductSalesReport(
+  filters: ReportFilters,
+): Promise<ProductSalesReport[]> {
+  const orders = await getOrders(filters);
+
+  if (orders.length === 0) {
+    return [];
+  }
+
+  const items = await getOrderItems(
+    orders.map((order) => order.id),
+  );
+
+  if (items.length === 0) {
+    return [];
+  }
+
+  const productIds = Array.from(
+    new Set(
+      items
+        .map((item) => item.product_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  const { data: products, error } = await supabase
+    .from("products")
+    .select("id, cost_price")
+    .in("id", productIds);
+
+  if (error) {
+    throw error;
+  }
+
+  const costMap = new Map(
+    (products ?? []).map((product) => [
+      product.id,
+      toNumber(product.cost_price),
+    ]),
+  );
+
+  const grouped = new Map<string, ProductSalesReport>();
+
+  for (const item of items) {
+    const key = item.product_id ?? item.product_name;
+
+    const revenue = toNumber(item.total_price);
+
+    const costPrice = item.product_id
+      ? costMap.get(item.product_id) ?? 0
+      : 0;
+
+    const cost = costPrice * item.quantity;
+
+    const current = grouped.get(key) ?? {
+      productId: item.product_id ?? "",
+      productName: item.product_name,
+      sku: item.sku,
+      quantity: 0,
+      revenue: 0,
+      cost: 0,
+      grossProfit: 0,
+      margin: 0,
+    };
+
+    current.quantity += item.quantity;
+    current.revenue += revenue;
+    current.cost += cost;
+    current.grossProfit =
+      current.revenue - current.cost;
+
+    current.margin =
+      current.revenue > 0
+        ? (current.grossProfit / current.revenue) * 100
+        : 0;
+
+    grouped.set(key, current);
+  }
+
+  return Array.from(grouped.values()).sort(
+    (a, b) => b.revenue - a.revenue,
+  );
+}
+
+export async function getCustomerSalesReport(
+  filters: ReportFilters,
+): Promise<CustomerSalesReport[]> {
+  const orders = await getOrders(filters);
+
+  const customerIds = Array.from(
+    new Set(
+      orders
+        .map((order) => order.customer_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  const customers = await getCustomers(customerIds);
+
+  const customerMap = new Map(
+    customers.map((customer) => [
+      customer.id,
+      customer.name,
+    ]),
+  );
+
+  const grouped = new Map<string, CustomerSalesReport>();
+
+  for (const order of orders) {
+    if (!order.customer_id) {
+      continue;
+    }
+
+    const key = order.customer_id;
+
+    const current = grouped.get(key) ?? {
+      customerId: key,
+      customerName:
+        customerMap.get(key) ?? "Cliente não identificado",
+      orders: 0,
+      revenue: 0,
+    };
+
+    current.orders += 1;
+    current.revenue += toNumber(order.total);
+
+    grouped.set(key, current);
+  }
+
+  return Array.from(grouped.values()).sort(
+    (a, b) => b.revenue - a.revenue,
+  );
+}
+
+export async function getCategorySalesReport(
+  filters: ReportFilters,
+): Promise<CategorySalesReport[]> {
+  const orders = await getOrders(filters);
+
+  if (orders.length === 0) {
+    return [];
+  }
+
+  const items = await getOrderItems(
+    orders.map((order) => order.id),
+  );
+
+  const productIds = Array.from(
+    new Set(
+      items
+        .map((item) => item.product_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  );
+
+  if (productIds.length === 0) {
+    return [];
+  }
+
+  const { data: products, error } = await supabase
+    .from("products")
+    .select(
+      `
+        id,
+        category_id,
+        categories (
+          id,
+          name
+        )
+      `,
+    )
+    .in("id", productIds);
+
+  if (error) {
+    throw error;
+  }
+
+  const productMap = new Map(
+    (products ?? []).map((product) => {
+      const category = Array.isArray(product.categories)
+        ? product.categories[0]
+        : product.categories;
+
+      return [
+        product.id,
+        {
+          categoryId: product.category_id,
+          categoryName:
+            category?.name ?? "Sem categoria",
+        },
+      ];
+    }),
+  );
+
+  const grouped = new Map<
+    string,
+    CategorySalesReport
+  >();
+
+  for (const item of items) {
+    if (!item.product_id) {
+      continue;
+    }
+
+    const product = productMap.get(item.product_id);
+
+    const categoryId =
+      product?.categoryId ?? null;
+
+    const key = categoryId ?? "without-category";
+
+    const current = grouped.get(key) ?? {
+      categoryId,
+      categoryName:
+        product?.categoryName ?? "Sem categoria",
+      orders: 0,
+      revenue: 0,
+    };
+
+    current.revenue += toNumber(item.total_price);
+
+    grouped.set(key, current);
+  }
+
+  const orderIdsByCategory = new Map<
+    string,
+    Set<string>
+  >();
+
+  for (const item of items) {
+    if (!item.product_id) {
+      continue;
+    }
+
+    const product = productMap.get(item.product_id);
+
+    const key =
+      product?.categoryId ?? "without-category";
+
+    const orderSet =
+      orderIdsByCategory.get(key) ??
+      new Set<string>();
+
+    orderSet.add(item.order_id);
+
+    orderIdsByCategory.set(key, orderSet);
+  }
+
+  for (const [key, orderSet] of orderIdsByCategory) {
+    const current = grouped.get(key);
+
+    if (current) {
+      current.orders = orderSet.size;
+    }
+  }
+
+  return Array.from(grouped.values()).sort(
+    (a, b) => b.revenue - a.revenue,
+  );
+}
+
+export async function getPaymentMethodReport(
+  filters: ReportFilters,
+): Promise<PaymentMethodReport[]> {
+  const orders = await getOrders(filters);
+
+  const grouped = new Map<
+    string,
+    PaymentMethodReport
+  >();
+
+  for (const order of orders) {
+    const key =
+      order.payment_method?.trim() ||
+      "Não informado";
+
+    const current = grouped.get(key) ?? {
+      paymentMethod: key,
+      orders: 0,
+      revenue: 0,
+    };
+
+    current.orders += 1;
+    current.revenue += toNumber(order.total);
+
+    grouped.set(key, current);
+  }
+
+  return Array.from(grouped.values()).sort(
+    (a, b) => b.revenue - a.revenue,
+  );
+}
+
+export async function getDreReport(
+  filters: ReportFilters,
+): Promise<DreReport> {
+  const summary = await getReportSummary(filters);
+
+  const orders = await getOrders(filters);
+
+  const items = await getOrderItems(
+    orders.map((order) => order.id),
+  );
+
+  let costOfGoods = 0;
+
+  if (items.length > 0) {
+    const productIds = Array.from(
+      new Set(
+        items
+          .map((item) => item.product_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    if (productIds.length > 0) {
+      const { data: products, error } = await supabase
+        .from("products")
+        .select("id, cost_price")
+        .in("id", productIds);
+
+      if (error) {
+        throw error;
+      }
+
+      const costMap = new Map(
+        (products ?? []).map((product) => [
+          product.id,
+          toNumber(product.cost_price),
+        ]),
+      );
+
+      for (const item of items) {
+        if (!item.product_id) {
+          continue;
+        }
+
+        const cost =
+          costMap.get(item.product_id) ?? 0;
+
+        costOfGoods += cost * item.quantity;
+      }
+    }
+  }
+
+  const grossProfit =
+    summary.revenue - costOfGoods;
+
+  const operatingExpenses = summary.paidExpenses;
+
+  const netResult =
+    grossProfit - operatingExpenses;
+
+  return {
+    revenue: summary.revenue,
+    deductions: 0,
+    netRevenue: summary.revenue,
+    costOfGoods,
+    grossProfit,
+    operatingExpenses,
+    netResult,
+  };
+}
+
+export async function getDefaultReportPeriod(): Promise<ReportPeriod> {
+  const today = new Date();
+
+  const start = new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    1,
+  );
+
+  const end = new Date(
+    today.getFullYear(),
+    today.getMonth() + 1,
+    0,
+  );
+
+  return {
+    startDate: formatDate(start),
+    endDate: formatDate(end),
+  };
+}
+
+export { getDateRange };
+
+============================================================
+FILE: .\src\features\reports\reports.queries.ts
+============================================================
+import { useQuery } from "@tanstack/react-query";
+
+import {
+  getCashFlowReport,
+  getCategorySalesReport,
+  getCustomerSalesReport,
+  getDefaultReportPeriod,
+  getDreReport,
+  getPaymentMethodReport,
+  getProductSalesReport,
+  getReportSummary,
+  getRevenueReport,
+} from "./reports.service";
+
+import type { ReportFilters } from "./reports.types";
+
+export const reportsKeys = {
+  all: ["reports"] as const,
+
+  summary: (filters: ReportFilters) =>
+    [...reportsKeys.all, "summary", filters] as const,
+
+  revenue: (filters: ReportFilters) =>
+    [...reportsKeys.all, "revenue", filters] as const,
+
+  cashFlow: (filters: ReportFilters) =>
+    [...reportsKeys.all, "cash-flow", filters] as const,
+
+  products: (filters: ReportFilters) =>
+    [...reportsKeys.all, "products", filters] as const,
+
+  customers: (filters: ReportFilters) =>
+    [...reportsKeys.all, "customers", filters] as const,
+
+  categories: (filters: ReportFilters) =>
+    [...reportsKeys.all, "categories", filters] as const,
+
+  paymentMethods: (filters: ReportFilters) =>
+    [...reportsKeys.all, "payment-methods", filters] as const,
+
+  dre: (filters: ReportFilters) =>
+    [...reportsKeys.all, "dre", filters] as const,
+
+  defaultPeriod: () =>
+    [...reportsKeys.all, "default-period"] as const,
+};
+
+export function useReportSummaryQuery(
+  filters: ReportFilters,
+) {
+  return useQuery({
+    queryKey: reportsKeys.summary(filters),
+    queryFn: () => getReportSummary(filters),
+    enabled:
+      Boolean(filters.startDate) &&
+      Boolean(filters.endDate),
+  });
+}
+
+export function useRevenueReportQuery(
+  filters: ReportFilters,
+) {
+  return useQuery({
+    queryKey: reportsKeys.revenue(filters),
+    queryFn: () => getRevenueReport(filters),
+    enabled:
+      Boolean(filters.startDate) &&
+      Boolean(filters.endDate),
+  });
+}
+
+export function useCashFlowReportQuery(
+  filters: ReportFilters,
+) {
+  return useQuery({
+    queryKey: reportsKeys.cashFlow(filters),
+    queryFn: () => getCashFlowReport(filters),
+    enabled:
+      Boolean(filters.startDate) &&
+      Boolean(filters.endDate),
+  });
+}
+
+export function useProductSalesReportQuery(
+  filters: ReportFilters,
+) {
+  return useQuery({
+    queryKey: reportsKeys.products(filters),
+    queryFn: () => getProductSalesReport(filters),
+    enabled:
+      Boolean(filters.startDate) &&
+      Boolean(filters.endDate),
+  });
+}
+
+export function useCustomerSalesReportQuery(
+  filters: ReportFilters,
+) {
+  return useQuery({
+    queryKey: reportsKeys.customers(filters),
+    queryFn: () => getCustomerSalesReport(filters),
+    enabled:
+      Boolean(filters.startDate) &&
+      Boolean(filters.endDate),
+  });
+}
+
+export function useCategorySalesReportQuery(
+  filters: ReportFilters,
+) {
+  return useQuery({
+    queryKey: reportsKeys.categories(filters),
+    queryFn: () => getCategorySalesReport(filters),
+    enabled:
+      Boolean(filters.startDate) &&
+      Boolean(filters.endDate),
+  });
+}
+
+export function usePaymentMethodReportQuery(
+  filters: ReportFilters,
+) {
+  return useQuery({
+    queryKey: reportsKeys.paymentMethods(filters),
+    queryFn: () => getPaymentMethodReport(filters),
+    enabled:
+      Boolean(filters.startDate) &&
+      Boolean(filters.endDate),
+  });
+}
+
+export function useDreReportQuery(
+  filters: ReportFilters,
+) {
+  return useQuery({
+    queryKey: reportsKeys.dre(filters),
+    queryFn: () => getDreReport(filters),
+    enabled:
+      Boolean(filters.startDate) &&
+      Boolean(filters.endDate),
+  });
+}
+
+export function useDefaultReportPeriodQuery() {
+  return useQuery({
+    queryKey: reportsKeys.defaultPeriod(),
+    queryFn: getDefaultReportPeriod,
+    staleTime: Infinity,
+  });
+}
+
+============================================================
+FILE: .\src\features\settings\settings.service.ts
+============================================================
+import { supabase } from "@/lib/supabase";
+
+import type {
+  CompanyPreferences,
+  CompanyPreferencesFormData,
+  CompanyProfile,
+} from "./settings.types";
+
+import type {
+  CompanyPreferencesSchema,
+  CompanyProfileSchema,
+} from "./settings.schema";
+
+export async function getCompanyProfile(): Promise<CompanyProfile | null> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  const { data, error } = await supabase
+    .from("company_profiles")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function saveCompanyProfile(
+  formData: CompanyProfileSchema,
+): Promise<CompanyProfile> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  const payload = {
+    user_id: user.id,
+    name: formData.name.trim(),
+    document: formData.document?.trim() || null,
+    email: formData.email?.trim() || null,
+    phone: formData.phone?.trim() || null,
+    logo_url: formData.logo_url?.trim() || null,
+    zip_code: formData.zip_code?.trim() || null,
+    address: formData.address?.trim() || null,
+    number: formData.number?.trim() || null,
+    complement: formData.complement?.trim() || null,
+    neighborhood: formData.neighborhood?.trim() || null,
+    city: formData.city?.trim() || null,
+    state: formData.state?.trim().toUpperCase() || null,
+  };
+
+  const { data, error } = await supabase
+    .from("company_profiles")
+    .upsert(payload, {
+      onConflict: "user_id",
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function getCompanyPreferences(): Promise<CompanyPreferences | null> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  const { data, error } = await supabase
+    .from("company_preferences")
+    .select("*")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+export async function saveCompanyPreferences(
+  formData: CompanyPreferencesSchema,
+): Promise<CompanyPreferences> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    throw userError;
+  }
+
+  if (!user) {
+    throw new Error("Usuário não autenticado.");
+  }
+
+  const payload: CompanyPreferencesFormData & {
+    user_id: string;
+  } = {
+    user_id: user.id,
+    currency: formData.currency,
+    date_format: formData.date_format,
+    timezone: formData.timezone,
+    default_page: formData.default_page,
+  };
+
+  const { data, error } = await supabase
+    .from("company_preferences")
+    .upsert(payload, {
+      onConflict: "user_id",
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
+
+============================================================
+FILE: .\src\features\settings\settings.queries.ts
+============================================================
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
+
+import {
+  getCompanyPreferences,
+  getCompanyProfile,
+  saveCompanyPreferences,
+  saveCompanyProfile,
+} from "./settings.service";
+
+import type {
+  CompanyPreferencesFormData,
+  CompanyProfileFormData,
+} from "./settings.types";
+
+export const settingsQueryKeys = {
+  all: ["settings"] as const,
+
+  companyProfile: () =>
+    [...settingsQueryKeys.all, "company-profile"] as const,
+
+  companyPreferences: () =>
+    [...settingsQueryKeys.all, "company-preferences"] as const,
+};
+
+export function useCompanyProfileQuery() {
+  return useQuery({
+    queryKey: settingsQueryKeys.companyProfile(),
+    queryFn: getCompanyProfile,
+  });
+}
+
+export function useSaveCompanyProfileMutation() {
+  return useMutation({
+    mutationFn: (data: CompanyProfileFormData) =>
+      saveCompanyProfile(data),
+
+    onSuccess: async (data) => {
+      queryClient.setQueryData(
+        settingsQueryKeys.companyProfile(),
+        data,
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: settingsQueryKeys.companyProfile(),
+      });
+    },
+  });
+}
+
+export function useCompanyPreferencesQuery() {
+  return useQuery({
+    queryKey: settingsQueryKeys.companyPreferences(),
+    queryFn: getCompanyPreferences,
+  });
+}
+
+export function useSaveCompanyPreferencesMutation() {
+  return useMutation({
+    mutationFn: (data: CompanyPreferencesFormData) =>
+      saveCompanyPreferences(data),
+
+    onSuccess: async (data) => {
+      queryClient.setQueryData(
+        settingsQueryKeys.companyPreferences(),
+        data,
+      );
+
+      await queryClient.invalidateQueries({
+        queryKey: settingsQueryKeys.companyPreferences(),
+      });
+    },
+  });
+}
+
+============================================================
+FILE: .\src\features\settings\settings.schema.ts
+============================================================
+import { z } from "zod";
+
+export const companyProfileSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Informe o nome da empresa."),
+
+  document: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
+  email: z
+    .string()
+    .trim()
+    .email("Informe um e-mail válido.")
+    .optional()
+    .or(z.literal("")),
+
+  phone: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
+  logo_url: z
+    .string()
+    .trim()
+    .url("Informe uma URL válida.")
+    .optional()
+    .or(z.literal("")),
+
+  zip_code: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
+  address: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
+  number: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
+  complement: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
+  neighborhood: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
+  city: z
+    .string()
+    .trim()
+    .optional()
+    .or(z.literal("")),
+
+  state: z
+    .string()
+    .trim()
+    .max(2, "Use a sigla do estado.")
+    .optional()
+    .or(z.literal("")),
+});
+
+export type CompanyProfileSchema = z.infer<
+  typeof companyProfileSchema
+>;
+
+export const companyPreferencesSchema = z.object({
+  currency: z.enum(["BRL", "USD", "EUR"]),
+
+  date_format: z.enum([
+    "DD/MM/YYYY",
+    "MM/DD/YYYY",
+    "YYYY-MM-DD",
+  ]),
+
+  timezone: z.string().min(1, "Selecione o fuso horário."),
+
+  default_page: z.enum([
+    "/dashboard",
+    "/products",
+    "/customers",
+    "/orders",
+    "/finance",
+  ]),
+});
+
+export type CompanyPreferencesSchema = z.infer<
+  typeof companyPreferencesSchema
+>;
+
+============================================================
+FILE: .\src\features\settings\settings.types.ts
+============================================================
+import type { CompanyProfileSchema } from "./settings.schema";
+
+export interface CompanyProfile {
+  id: string;
+  user_id: string;
+  name: string;
+  document: string | null;
+  email: string | null;
+  phone: string | null;
+  logo_url: string | null;
+  zip_code: string | null;
+  address: string | null;
+  number: string | null;
+  complement: string | null;
+  neighborhood: string | null;
+  city: string | null;
+  state: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type CompanyProfileFormData = CompanyProfileSchema;
+
+export interface CompanyPreferences {
+  id: string;
+  user_id: string;
+  currency: "BRL" | "USD" | "EUR";
+  date_format: "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
+  timezone: string;
+  default_page:
+    | "/dashboard"
+    | "/products"
+    | "/customers"
+    | "/orders"
+    | "/finance";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CompanyPreferencesFormData {
+  currency: CompanyPreferences["currency"];
+  date_format: CompanyPreferences["date_format"];
+  timezone: CompanyPreferences["timezone"];
+  default_page: CompanyPreferences["default_page"];
+}
+
+============================================================
+FILE: .\src\features\auth\AuthContext.tsx
+============================================================
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type PropsWithChildren,
+} from "react";
+
+import type { Session, User } from "@supabase/supabase-js";
+
+import { supabase } from "@/lib/supabase";
+
+interface AuthContextValue {
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+  ) => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(
+  undefined,
+);
+
+export function AuthProvider({ children }: PropsWithChildren) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadSession() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+    }
+
+    loadSession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      },
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function signIn(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  async function signUp(
+    email: string,
+    password: string,
+    fullName: string,
+  ) {
+    const {
+      data,
+      error,
+    } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        },
+      },
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    if (data.user && data.session) {
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          id: data.user.id,
+          full_name: fullName,
+        });
+
+      if (profileError) {
+        throw new Error(profileError.message);
+      }
+    }
+  }
+
+  async function signOut() {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        signIn,
+        signUp,
+        signOut,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+
+  if (!context) {
+    throw new Error(
+      "useAuth deve ser usado dentro de um AuthProvider.",
+    );
+  }
+
+  return context;
+}

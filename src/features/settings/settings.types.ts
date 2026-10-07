@@ -3,6 +3,7 @@ import type { CompanyProfileSchema } from "./settings.schema";
 export interface CompanyProfile {
   id: string;
   user_id: string;
+  organization_id: string;
   name: string;
   document: string | null;
   email: string | null;
@@ -24,6 +25,7 @@ export type CompanyProfileFormData = CompanyProfileSchema;
 export interface CompanyPreferences {
   id: string;
   user_id: string;
+  organization_id: string;
   currency: "BRL" | "USD" | "EUR";
   date_format: "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
   timezone: string;

@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/supabase";
 
-import { getCurrentUserId } from "../finance.auth";
+import {
+  getCurrentOrganizationId,
+  getCurrentUserId,
+} from "../finance.auth";
 
 import {
   mapAccountPayable,
@@ -25,10 +28,10 @@ export async function getAccountsPayable(params: {
   pageSize?: number;
 } = {}) {
   const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
 
   const page = params.page ?? 1;
-  const pageSize =
-    params.pageSize ?? DEFAULT_PAGE_SIZE;
+  const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -49,6 +52,7 @@ export async function getAccountsPayable(params: {
       { count: "exact" },
     )
     .eq("user_id", userId)
+    .eq("organization_id", organizationId)
     .order("created_at", {
       ascending: false,
     });
@@ -93,12 +97,14 @@ export async function getAccountPayable(
   payableId: string,
 ): Promise<AccountPayable> {
   const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
 
   const { data, error } = await supabase
     .from("accounts_payable")
     .select("*")
     .eq("id", payableId)
     .eq("user_id", userId)
+    .eq("organization_id", organizationId)
     .single();
 
   if (error) {
@@ -111,17 +117,35 @@ export async function getAccountPayable(
 export async function getPayableInstallments(
   payableId: string,
 ): Promise<PayableInstallment[]> {
+  const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
+
   const { data, error } = await supabase
     .from("accounts_payable_installments")
-    .select("*")
+    .select(`
+      *,
+      accounts_payable!inner (
+        user_id,
+        organization_id
+      )
+    `)
     .eq("payable_id", payableId)
-    .order("installment_number", { ascending: true });
+    .eq("accounts_payable.user_id", userId)
+    .eq(
+      "accounts_payable.organization_id",
+      organizationId,
+    )
+    .order("installment_number", {
+      ascending: true,
+    });
 
   if (error) {
     throw error;
   }
 
-  return (data ?? []).map(mapPayableInstallment);
+  return (data ?? []).map(
+    mapPayableInstallment,
+  );
 }
 
 export async function createPayable(
@@ -153,7 +177,8 @@ export async function payPayableInstallment(
     "pay_payable_installment",
     {
       p_installment_id: input.installmentId,
-      p_financial_account_id: input.financialAccountId,
+      p_financial_account_id:
+        input.financialAccountId,
       p_amount: input.amount,
     },
   );
@@ -164,8 +189,3 @@ export async function payPayableInstallment(
 
   return data;
 }
-
-
-// =====================================================
-// MOVIMENTAÇÕES DE CAIXA
-// =====================================================

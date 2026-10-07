@@ -1,13 +1,9 @@
-import { supabase } from "@/lib/supabase";
+import {
+  getCurrentOrganizationId,
+  getCurrentUserId,
+} from "@/features/organization/organization.auth";
 
-export async function getCurrentUserId(): Promise<string> {
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error("Usuário não autenticado.");
-  }
-
-  return user.id;
-}
+export {
+  getCurrentOrganizationId,
+  getCurrentUserId,
+};

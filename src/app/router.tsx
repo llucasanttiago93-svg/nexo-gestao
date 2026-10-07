@@ -21,6 +21,7 @@ import { OrderCreate } from "@/pages/orders/OrderCreate";
 
 import { Customers } from "@/pages/customers/Customers";
 import { CustomerCreate } from "@/pages/customers/CustomerCreate";
+
 import { CustomerEdit } from "@/pages/customers/CustomerEdit";
 
 import Reports from "@/pages/reports/Reports";

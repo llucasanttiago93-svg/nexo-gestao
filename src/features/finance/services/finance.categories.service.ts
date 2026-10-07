@@ -2,6 +2,10 @@ import { supabase } from "@/lib/supabase";
 
 import { getCurrentUserId } from "../finance.auth";
 
+import {
+  getCurrentOrganizationId,
+} from "@/features/organization/services/organization.service";
+
 import { mapFinanceCategory } from "../finance.mappers";
 
 import type {
@@ -12,11 +16,13 @@ export async function getFinanceCategories(): Promise<
   FinanceCategory[]
 > {
   const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
 
   const { data, error } = await supabase
     .from("finance_categories")
     .select("*")
     .eq("user_id", userId)
+    .eq("organization_id", organizationId)
     .eq("is_active", true)
     .order("name", { ascending: true });
 
@@ -38,8 +44,3 @@ export async function createDefaultFinanceCategories(): Promise<number> {
 
   return Number(data ?? 0);
 }
-
-
-// =====================================================
-// CONTAS A RECEBER
-// =====================================================

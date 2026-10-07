@@ -1,16 +1,9 @@
-import { supabase } from "@/lib/supabase";
+import {
+  getCurrentOrganizationId,
+  getCurrentUserId,
+} from "@/features/organization/organization.auth";
 
-export async function getCurrentUserId() {
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    throw new Error(
-      "Você precisa estar autenticado para acessar os pedidos.",
-    );
-  }
-
-  return user.id;
-}
+export {
+  getCurrentOrganizationId,
+  getCurrentUserId,
+};

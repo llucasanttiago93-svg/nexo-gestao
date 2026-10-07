@@ -1,6 +1,10 @@
 import { supabase } from "@/lib/supabase";
 
-import { getCurrentUserId } from "../orders.auth";
+import {
+  getCurrentOrganizationId,
+  getCurrentUserId,
+} from "../orders.auth";
+
 import { mapOrder } from "../orders.mappers";
 
 import type {
@@ -15,9 +19,14 @@ export async function getOrders(
   params: GetOrdersParams = {},
 ): Promise<OrdersResult> {
   const userId = await getCurrentUserId();
+  const organizationId =
+    await getCurrentOrganizationId();
 
   const page = Math.max(params.page ?? 1, 1);
-  const pageSize = Math.max(params.pageSize ?? 10, 1);
+  const pageSize = Math.max(
+    params.pageSize ?? 10,
+    1,
+  );
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -27,6 +36,7 @@ export async function getOrders(
     .select(
       `
         id,
+        organization_id,
         order_number,
         customer_id,
         status,
@@ -46,7 +56,8 @@ export async function getOrders(
         count: "exact",
       },
     )
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("organization_id", organizationId);
 
   if (params.search?.trim()) {
     const search = params.search.trim();
@@ -115,6 +126,8 @@ export async function getOrder(
   orderId: string,
 ): Promise<Order> {
   const userId = await getCurrentUserId();
+  const organizationId =
+    await getCurrentOrganizationId();
 
   const {
     data,
@@ -124,6 +137,7 @@ export async function getOrder(
     .select(
       `
         id,
+        organization_id,
         order_number,
         customer_id,
         status,
@@ -142,6 +156,7 @@ export async function getOrder(
     )
     .eq("id", orderId)
     .eq("user_id", userId)
+    .eq("organization_id", organizationId)
     .single();
 
   if (error) {
@@ -157,6 +172,8 @@ export async function getOrderDetails(
   orderId: string,
 ): Promise<OrderDetails> {
   const userId = await getCurrentUserId();
+  const organizationId =
+    await getCurrentOrganizationId();
 
   const {
     data: orderData,
@@ -166,6 +183,7 @@ export async function getOrderDetails(
     .select(
       `
         id,
+        organization_id,
         order_number,
         customer_id,
         status,
@@ -184,6 +202,7 @@ export async function getOrderDetails(
     )
     .eq("id", orderId)
     .eq("user_id", userId)
+    .eq("organization_id", organizationId)
     .single();
 
   if (orderError) {
@@ -225,26 +244,40 @@ export async function getOrderDetails(
 
   return {
     ...order,
-    items: (itemsData ?? []).map((item) => ({
-      id: item.id,
-      orderId: item.order_id,
-      productId: item.product_id,
-      productName: item.product_name,
-      sku: item.sku,
-      quantity: item.quantity,
-      unitPrice: Number(item.unit_price),
-      totalPrice: Number(item.total_price),
-      createdAt: item.created_at,
-    })),
+    items: (itemsData ?? []).map(
+      (item) => ({
+        id: item.id,
+        orderId: item.order_id,
+        productId: item.product_id,
+        productName: item.product_name,
+        sku: item.sku,
+        quantity: item.quantity,
+        unitPrice: Number(
+          item.unit_price,
+        ),
+        totalPrice: Number(
+          item.total_price,
+        ),
+        createdAt: item.created_at,
+      }),
+    ),
   };
 }
 
 export async function getOrderCreateData(): Promise<OrderCreateData> {
   const userId = await getCurrentUserId();
+  const organizationId =
+    await getCurrentOrganizationId();
 
   const [
-    { data: customers, error: customersError },
-    { data: products, error: productsError },
+    {
+      data: customers,
+      error: customersError,
+    },
+    {
+      data: products,
+      error: productsError,
+    },
   ] = await Promise.all([
     supabase
       .from("customers")
@@ -257,6 +290,10 @@ export async function getOrderCreateData(): Promise<OrderCreateData> {
         `,
       )
       .eq("user_id", userId)
+      .eq(
+        "organization_id",
+        organizationId,
+      )
       .order("name", {
         ascending: true,
       }),
@@ -273,6 +310,10 @@ export async function getOrderCreateData(): Promise<OrderCreateData> {
         `,
       )
       .eq("user_id", userId)
+      .eq(
+        "organization_id",
+        organizationId,
+      )
       .eq("status", "active")
       .order("name", {
         ascending: true,
@@ -292,19 +333,23 @@ export async function getOrderCreateData(): Promise<OrderCreateData> {
   }
 
   return {
-    customers: (customers ?? []).map((customer) => ({
-      id: customer.id,
-      name: customer.name,
-      email: customer.email,
-      phone: customer.phone,
-    })),
+    customers: (customers ?? []).map(
+      (customer) => ({
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+      }),
+    ),
 
-    products: (products ?? []).map((product) => ({
-      id: product.id,
-      name: product.name,
-      sku: product.sku,
-      price: Number(product.price),
-      stock: product.stock,
-    })),
+    products: (products ?? []).map(
+      (product) => ({
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        price: Number(product.price),
+        stock: product.stock,
+      }),
+    ),
   };
 }

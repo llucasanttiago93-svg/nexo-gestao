@@ -1,6 +1,12 @@
 import { supabase } from "@/lib/supabase";
 
-import { getCurrentUserId } from "../finance.auth";
+import {
+  getCurrentUserId,
+} from "../finance.auth";
+
+import {
+  getCurrentOrganizationId,
+} from "@/features/organization/services/organization.service";
 
 import { mapFinanceAccount } from "../finance.mappers";
 
@@ -12,11 +18,13 @@ export async function getFinanceAccounts(): Promise<
   FinanceAccount[]
 > {
   const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
 
   const { data, error } = await supabase
     .from("finance_accounts")
     .select("*")
     .eq("user_id", userId)
+    .eq("organization_id", organizationId)
     .order("is_active", { ascending: false })
     .order("name", { ascending: true });
 
@@ -31,12 +39,14 @@ export async function getFinanceAccount(
   accountId: string,
 ): Promise<FinanceAccount> {
   const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
 
   const { data, error } = await supabase
     .from("finance_accounts")
     .select("*")
     .eq("id", accountId)
     .eq("user_id", userId)
+    .eq("organization_id", organizationId)
     .single();
 
   if (error) {
@@ -49,22 +59,25 @@ export async function getFinanceAccount(
 export async function createFinanceAccount(input: {
   name: string;
   type:
-  | "cash"
-  | "bank"
-  | "digital_account"
-  | "credit_card";
+    | "cash"
+    | "bank"
+    | "digital_account"
+    | "credit_card";
   bankName?: string | null;
   accountNumber?: string | null;
   initialBalance?: number;
 }): Promise<FinanceAccount> {
   const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
 
-  const initialBalance = input.initialBalance ?? 0;
+  const initialBalance =
+    input.initialBalance ?? 0;
 
   const { data, error } = await supabase
     .from("finance_accounts")
     .insert({
       user_id: userId,
+      organization_id: organizationId,
       name: input.name.trim(),
       type: input.type,
       bank_name: input.bankName || null,
@@ -87,16 +100,17 @@ export async function updateFinanceAccount(
   input: {
     name: string;
     type:
-    | "cash"
-    | "bank"
-    | "digital_account"
-    | "credit_card";
+      | "cash"
+      | "bank"
+      | "digital_account"
+      | "credit_card";
     bankName?: string | null;
     accountNumber?: string | null;
     isActive?: boolean;
   },
 ): Promise<FinanceAccount> {
   const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
 
   const { data, error } = await supabase
     .from("finance_accounts")
@@ -110,6 +124,7 @@ export async function updateFinanceAccount(
     })
     .eq("id", accountId)
     .eq("user_id", userId)
+    .eq("organization_id", organizationId)
     .select("*")
     .single();
 
@@ -131,8 +146,3 @@ export async function getOrCreateDefaultFinanceAccount(): Promise<string> {
 
   return data;
 }
-
-
-// =====================================================
-// CATEGORIAS
-// =====================================================

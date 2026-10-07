@@ -14,6 +14,7 @@ export type PaymentStatus =
 
 export interface Order {
   id: string;
+  organizationId: string;
   orderNumber: number;
   customerId: string | null;
   customerName: string;

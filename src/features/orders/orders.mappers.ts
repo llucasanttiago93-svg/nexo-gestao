@@ -7,6 +7,7 @@ export function mapOrder(row: any): Order {
 
   return {
     id: row.id,
+    organizationId: row.organization_id,
     orderNumber: row.order_number,
     customerId: row.customer_id,
     customerName:

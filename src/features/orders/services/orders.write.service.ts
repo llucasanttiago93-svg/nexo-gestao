@@ -1,6 +1,9 @@
 import { supabase } from "@/lib/supabase";
 
-import { getCurrentUserId } from "../orders.auth";
+import {
+  getCurrentOrganizationId,
+  getCurrentUserId,
+} from "../orders.auth";
 
 import type {
   OrderCreateItem,
@@ -16,10 +19,6 @@ export async function createOrder(params: {
   paymentMethod: string | null;
   notes: string;
 }): Promise<string> {
-  const userId = await getCurrentUserId();
-
-  void userId;
-
   const {
     data,
     error,
@@ -27,13 +26,16 @@ export async function createOrder(params: {
     "create_order_with_items",
     {
       p_customer_id: params.customerId,
-      p_items: params.items.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-      })),
+      p_items: params.items.map(
+        (item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+        }),
+      ),
       p_discount: params.discount,
       p_shipping: params.shipping,
-      p_payment_method: params.paymentMethod,
+      p_payment_method:
+        params.paymentMethod,
       p_notes: params.notes,
     },
   );
@@ -58,15 +60,22 @@ export async function updateOrderStatus(
   status: OrderStatus,
 ): Promise<void> {
   const userId = await getCurrentUserId();
+  const organizationId =
+    await getCurrentOrganizationId();
 
   const { error } = await supabase
     .from("orders")
     .update({
       status,
-      updated_at: new Date().toISOString(),
+      updated_at:
+        new Date().toISOString(),
     })
     .eq("id", orderId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq(
+      "organization_id",
+      organizationId,
+    );
 
   if (error) {
     throw new Error(
@@ -80,15 +89,22 @@ export async function updateOrderPaymentStatus(
   paymentStatus: PaymentStatus,
 ): Promise<void> {
   const userId = await getCurrentUserId();
+  const organizationId =
+    await getCurrentOrganizationId();
 
   const { error } = await supabase
     .from("orders")
     .update({
       payment_status: paymentStatus,
-      updated_at: new Date().toISOString(),
+      updated_at:
+        new Date().toISOString(),
     })
     .eq("id", orderId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq(
+      "organization_id",
+      organizationId,
+    );
 
   if (error) {
     throw new Error(

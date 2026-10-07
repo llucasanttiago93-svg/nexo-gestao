@@ -39,6 +39,7 @@ export type CashMovementStatus =
 export interface FinanceAccount {
   id: string;
   userId: string;
+  organizationId: string;
   name: string;
   type: FinanceAccountType;
   bankName: string | null;
@@ -57,6 +58,7 @@ export interface FinanceAccount {
 export interface FinanceCategory {
   id: string;
   userId: string;
+  organizationId: string;
   name: string;
   type: FinanceCategoryType;
   isActive: boolean;
@@ -71,6 +73,7 @@ export interface FinanceCategory {
 export interface AccountReceivable {
   id: string;
   userId: string;
+  organizationId: string;
   customerId: string | null;
   orderId: string | null;
   description: string;
@@ -110,6 +113,7 @@ export interface ReceivableInstallment {
 export interface AccountPayable {
   id: string;
   userId: string;
+  organizationId: string;
   description: string;
   categoryId: string | null;
   totalAmount: number;
@@ -147,6 +151,7 @@ export interface PayableInstallment {
 export interface CashMovement {
   id: string;
   userId: string;
+  organizationId: string;
   financialAccountId: string;
   type: CashMovementType;
   description: string;

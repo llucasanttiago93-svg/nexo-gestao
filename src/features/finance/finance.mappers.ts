@@ -12,6 +12,7 @@ export function mapFinanceAccount(row: any): FinanceAccount {
   return {
     id: row.id,
     userId: row.user_id,
+    organizationId: row.organization_id,
     name: row.name,
     type: row.type,
     bankName: row.bank_name,
@@ -28,6 +29,7 @@ export function mapFinanceCategory(row: any): FinanceCategory {
   return {
     id: row.id,
     userId: row.user_id,
+    organizationId: row.organization_id,
     name: row.name,
     type: row.type,
     isActive: row.is_active,
@@ -52,7 +54,7 @@ export function mapAccountReceivable(
           installment.status,
         ) &&
         Number(installment.paid_amount) <
-        Number(installment.amount),
+          Number(installment.amount),
     )
     .sort(
       (a: any, b: any) =>
@@ -66,16 +68,17 @@ export function mapAccountReceivable(
       ? pendingInstallments[0].due_date
       : installments.length > 0
         ? [...installments].sort(
-          (a: any, b: any) =>
-            String(b.due_date).localeCompare(
-              String(a.due_date),
-            ),
-        )[0].due_date
+            (a: any, b: any) =>
+              String(b.due_date).localeCompare(
+                String(a.due_date),
+              ),
+          )[0].due_date
         : null;
 
   return {
     id: row.id,
     userId: row.user_id,
+    organizationId: row.organization_id,
     customerId: row.customer_id,
     orderId: row.order_id,
     description: row.description,
@@ -83,7 +86,7 @@ export function mapAccountReceivable(
     totalAmount: Number(row.total_amount),
     status: row.status,
     notes: row.notes,
-    nextDueDate: nextDueDate,
+    nextDueDate,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -109,7 +112,9 @@ export function mapReceivableInstallment(
   };
 }
 
-export function mapAccountPayable(row: any): AccountPayable {
+export function mapAccountPayable(
+  row: any,
+): AccountPayable {
   const installments = Array.isArray(
     row.accounts_payable_installments,
   )
@@ -123,7 +128,7 @@ export function mapAccountPayable(row: any): AccountPayable {
           installment.status,
         ) &&
         Number(installment.paid_amount) <
-        Number(installment.amount),
+          Number(installment.amount),
     )
     .sort(
       (a: any, b: any) =>
@@ -137,16 +142,17 @@ export function mapAccountPayable(row: any): AccountPayable {
       ? pendingInstallments[0].due_date
       : installments.length > 0
         ? [...installments].sort(
-          (a: any, b: any) =>
-            String(b.due_date).localeCompare(
-              String(a.due_date),
-            ),
-        )[0].due_date
+            (a: any, b: any) =>
+              String(b.due_date).localeCompare(
+                String(a.due_date),
+              ),
+          )[0].due_date
         : null;
 
   return {
     id: row.id,
     userId: row.user_id,
+    organizationId: row.organization_id,
     description: row.description,
     categoryId: row.category_id,
     totalAmount: Number(row.total_amount),
@@ -178,10 +184,13 @@ export function mapPayableInstallment(
   };
 }
 
-export function mapCashMovement(row: any): CashMovement {
+export function mapCashMovement(
+  row: any,
+): CashMovement {
   return {
     id: row.id,
     userId: row.user_id,
+    organizationId: row.organization_id,
     financialAccountId: row.financial_account_id,
     type: row.type,
     description: row.description,
@@ -189,8 +198,10 @@ export function mapCashMovement(row: any): CashMovement {
     movementDate: row.movement_date,
     categoryId: row.category_id,
     orderId: row.order_id,
-    receivableInstallmentId: row.receivable_installment_id,
-    payableInstallmentId: row.payable_installment_id,
+    receivableInstallmentId:
+      row.receivable_installment_id,
+    payableInstallmentId:
+      row.payable_installment_id,
     transferId: row.transfer_id,
     status: row.status,
     notes: row.notes,
@@ -198,8 +209,3 @@ export function mapCashMovement(row: any): CashMovement {
     updatedAt: row.updated_at,
   };
 }
-
-
-// =====================================================
-// CONTAS FINANCEIRAS
-// =====================================================

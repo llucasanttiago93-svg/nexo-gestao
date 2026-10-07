@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/supabase";
 
+import { getCurrentUserId } from "@/features/organization/organization.auth";
+import { getCurrentOrganizationId } from "@/features/organization/services/organization.service";
+
 import type {
   CompanyPreferences,
   CompanyPreferencesFormData,
@@ -12,23 +15,12 @@ import type {
 } from "../settings.schema";
 
 export async function getCompanyProfile(): Promise<CompanyProfile | null> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) {
-    throw userError;
-  }
-
-  if (!user) {
-    throw new Error("Usuário não autenticado.");
-  }
+  const userId = await getCurrentUserId();
 
   const { data, error } = await supabase
     .from("company_profiles")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
@@ -41,21 +33,12 @@ export async function getCompanyProfile(): Promise<CompanyProfile | null> {
 export async function saveCompanyProfile(
   formData: CompanyProfileSchema,
 ): Promise<CompanyProfile> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) {
-    throw userError;
-  }
-
-  if (!user) {
-    throw new Error("Usuário não autenticado.");
-  }
+  const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
 
   const payload = {
-    user_id: user.id,
+    user_id: userId,
+    organization_id: organizationId,
     name: formData.name.trim(),
     document: formData.document?.trim() || null,
     email: formData.email?.trim() || null,
@@ -86,23 +69,12 @@ export async function saveCompanyProfile(
 }
 
 export async function getCompanyPreferences(): Promise<CompanyPreferences | null> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) {
-    throw userError;
-  }
-
-  if (!user) {
-    throw new Error("Usuário não autenticado.");
-  }
+  const userId = await getCurrentUserId();
 
   const { data, error } = await supabase
     .from("company_preferences")
     .select("*")
-    .eq("user_id", user.id)
+    .eq("user_id", userId)
     .maybeSingle();
 
   if (error) {
@@ -115,23 +87,15 @@ export async function getCompanyPreferences(): Promise<CompanyPreferences | null
 export async function saveCompanyPreferences(
   formData: CompanyPreferencesSchema,
 ): Promise<CompanyPreferences> {
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError) {
-    throw userError;
-  }
-
-  if (!user) {
-    throw new Error("Usuário não autenticado.");
-  }
+  const userId = await getCurrentUserId();
+  const organizationId = await getCurrentOrganizationId();
 
   const payload: CompanyPreferencesFormData & {
     user_id: string;
+    organization_id: string;
   } = {
-    user_id: user.id,
+    user_id: userId,
+    organization_id: organizationId,
     currency: formData.currency,
     date_format: formData.date_format,
     timezone: formData.timezone,

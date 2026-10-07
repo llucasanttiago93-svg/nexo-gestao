@@ -2,6 +2,10 @@ import { supabase } from "@/lib/supabase";
 
 import { getCurrentUserId } from "../finance.auth";
 
+import {
+  getCurrentOrganizationId,
+} from "@/features/organization/services/organization.service";
+
 import { mapCashMovement } from "../finance.mappers";
 
 import type {
@@ -21,9 +25,12 @@ export async function getCashMovements(params: {
   pageSize?: number;
 } = {}) {
   const userId = await getCurrentUserId();
+  const organizationId =
+    await getCurrentOrganizationId();
 
   const page = params.page ?? 1;
-  const pageSize = params.pageSize ?? DEFAULT_PAGE_SIZE;
+  const pageSize =
+    params.pageSize ?? DEFAULT_PAGE_SIZE;
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -32,11 +39,19 @@ export async function getCashMovements(params: {
     .from("cash_movements")
     .select("*", { count: "exact" })
     .eq("user_id", userId)
-    .order("movement_date", { ascending: false })
-    .order("created_at", { ascending: false });
+    .eq("organization_id", organizationId)
+    .order("movement_date", {
+      ascending: false,
+    })
+    .order("created_at", {
+      ascending: false,
+    });
 
   if (params.type) {
-    query = query.eq("type", params.type);
+    query = query.eq(
+      "type",
+      params.type,
+    );
   }
 
   if (params.accountId) {
@@ -60,7 +75,11 @@ export async function getCashMovements(params: {
     );
   }
 
-  const { data, error, count } = await query.range(from, to);
+  const {
+    data,
+    error,
+    count,
+  } = await query.range(from, to);
 
   if (error) {
     throw error;
@@ -69,21 +88,22 @@ export async function getCashMovements(params: {
   const total = count ?? 0;
 
   return {
-    movements: (data ?? []).map(mapCashMovement),
+    movements: (data ?? []).map(
+      mapCashMovement,
+    ),
     total,
     page,
     pageSize,
-    totalPages: Math.ceil(total / pageSize),
+    totalPages: Math.ceil(
+      total / pageSize,
+    ),
   };
 }
 
-
-// =====================================================
-// RESUMO FINANCEIRO
-// =====================================================
-
 export async function getFinanceSummary(): Promise<FinanceSummary> {
   const userId = await getCurrentUserId();
+  const organizationId =
+    await getCurrentOrganizationId();
 
   const [
     cashResult,
@@ -92,19 +112,57 @@ export async function getFinanceSummary(): Promise<FinanceSummary> {
   ] = await Promise.all([
     supabase
       .from("cash_movements")
-      .select("type, amount, transfer_id")
+      .select(
+        "type, amount, transfer_id",
+      )
       .eq("user_id", userId)
+      .eq(
+        "organization_id",
+        organizationId,
+      )
       .eq("status", "completed"),
 
     supabase
       .from("accounts_receivable_installments")
-      .select("amount, paid_amount, status, due_date, accounts_receivable!inner(user_id)")
-      .eq("accounts_receivable.user_id", userId),
+      .select(`
+        amount,
+        paid_amount,
+        status,
+        due_date,
+        accounts_receivable!inner(
+          user_id,
+          organization_id
+        )
+      `)
+      .eq(
+        "accounts_receivable.user_id",
+        userId,
+      )
+      .eq(
+        "accounts_receivable.organization_id",
+        organizationId,
+      ),
 
     supabase
       .from("accounts_payable_installments")
-      .select("amount, paid_amount, status, due_date, accounts_payable!inner(user_id)")
-      .eq("accounts_payable.user_id", userId),
+      .select(`
+        amount,
+        paid_amount,
+        status,
+        due_date,
+        accounts_payable!inner(
+          user_id,
+          organization_id
+        )
+      `)
+      .eq(
+        "accounts_payable.user_id",
+        userId,
+      )
+      .eq(
+        "accounts_payable.organization_id",
+        organizationId,
+      ),
   ]);
 
   if (cashResult.error) {
@@ -123,14 +181,13 @@ export async function getFinanceSummary(): Promise<FinanceSummary> {
   let totalExpense = 0;
 
   for (const movement of cashResult.data ?? []) {
-    // Transferências entre contas próprias não representam
-    // receita nem despesa consolidada. Elas apenas mudam o
-    // dinheiro de uma conta financeira para outra.
     if (movement.transfer_id) {
       continue;
     }
 
-    const amount = Number(movement.amount);
+    const amount = Number(
+      movement.amount,
+    );
 
     if (movement.type === "income") {
       totalIncome += amount;
@@ -144,20 +201,36 @@ export async function getFinanceSummary(): Promise<FinanceSummary> {
   let totalReceivable = 0;
   let overdueReceivable = 0;
 
-  for (const installment of receivableInstallmentsResult.data ?? []) {
-    const amount = Number(installment.amount);
-    const paidAmount = Number(installment.paid_amount);
-    const outstanding = Math.max(amount - paidAmount, 0);
+  for (
+    const installment of
+      receivableInstallmentsResult.data ?? []
+  ) {
+    const amount = Number(
+      installment.amount,
+    );
+
+    const paidAmount = Number(
+      installment.paid_amount,
+    );
+
+    const outstanding = Math.max(
+      amount - paidAmount,
+      0,
+    );
 
     if (
-      ["open", "partially_paid", "overdue"].includes(
-        installment.status,
-      )
+      [
+        "open",
+        "partially_paid",
+        "overdue",
+      ].includes(installment.status)
     ) {
       totalReceivable += outstanding;
     }
 
-    if (installment.status === "overdue") {
+    if (
+      installment.status === "overdue"
+    ) {
       overdueReceivable += outstanding;
     }
   }
@@ -165,42 +238,69 @@ export async function getFinanceSummary(): Promise<FinanceSummary> {
   let totalPayable = 0;
   let overduePayable = 0;
 
-  for (const installment of payableInstallmentsResult.data ?? []) {
-    const amount = Number(installment.amount);
-    const paidAmount = Number(installment.paid_amount);
-    const outstanding = Math.max(amount - paidAmount, 0);
+  for (
+    const installment of
+      payableInstallmentsResult.data ?? []
+  ) {
+    const amount = Number(
+      installment.amount,
+    );
+
+    const paidAmount = Number(
+      installment.paid_amount,
+    );
+
+    const outstanding = Math.max(
+      amount - paidAmount,
+      0,
+    );
 
     if (
-      ["open", "partially_paid", "overdue"].includes(
-        installment.status,
-      )
+      [
+        "open",
+        "partially_paid",
+        "overdue",
+      ].includes(installment.status)
     ) {
       totalPayable += outstanding;
     }
 
-    if (installment.status === "overdue") {
+    if (
+      installment.status === "overdue"
+    ) {
       overduePayable += outstanding;
     }
   }
 
-  const balance = totalIncome - totalExpense;
+  const balance =
+    totalIncome - totalExpense;
 
-  const { data: accounts, error: accountsError } =
-    await supabase
-      .from("finance_accounts")
-      .select("current_balance")
-      .eq("user_id", userId)
-      .eq("is_active", true);
+  const {
+    data: accounts,
+    error: accountsError,
+  } = await supabase
+    .from("finance_accounts")
+    .select("current_balance")
+    .eq("user_id", userId)
+    .eq(
+      "organization_id",
+      organizationId,
+    )
+    .eq("is_active", true);
 
   if (accountsError) {
     throw accountsError;
   }
 
-  const accountBalance = (accounts ?? []).reduce(
-    (total, account) =>
-      total + Number(account.current_balance),
-    0,
-  );
+  const accountBalance =
+    (accounts ?? []).reduce(
+      (total, account) =>
+        total +
+        Number(
+          account.current_balance,
+        ),
+      0,
+    );
 
   return {
     totalIncome,
@@ -214,24 +314,33 @@ export async function getFinanceSummary(): Promise<FinanceSummary> {
   };
 }
 
-
-// =====================================================
-// FLUXO DE CAIXA
-// =====================================================
-
 export async function getCashFlow(
   startDate: string,
   endDate: string,
 ): Promise<CashFlowPoint[]> {
   const userId = await getCurrentUserId();
+  const organizationId =
+    await getCurrentOrganizationId();
 
   const { data, error } = await supabase
     .from("cash_movements")
-    .select("type, amount, movement_date, transfer_id")
+    .select(
+      "type, amount, movement_date, transfer_id",
+    )
     .eq("user_id", userId)
+    .eq(
+      "organization_id",
+      organizationId,
+    )
     .eq("status", "completed")
-    .gte("movement_date", startDate)
-    .lte("movement_date", endDate)
+    .gte(
+      "movement_date",
+      startDate,
+    )
+    .lte(
+      "movement_date",
+      endDate,
+    )
     .order("movement_date", {
       ascending: true,
     });
@@ -249,21 +358,28 @@ export async function getCashFlow(
   >();
 
   for (const movement of data ?? []) {
-    // Transferências internas não devem inflar
-    // entradas/saídas no fluxo consolidado.
     if (movement.transfer_id) {
       continue;
     }
 
-    const date = String(movement.movement_date);
-    const month = date.slice(0, 7);
+    const date = String(
+      movement.movement_date,
+    );
 
-    const current = grouped.get(month) ?? {
-      income: 0,
-      expense: 0,
-    };
+    const month = date.slice(
+      0,
+      7,
+    );
 
-    const amount = Number(movement.amount);
+    const current =
+      grouped.get(month) ?? {
+        income: 0,
+        expense: 0,
+      };
+
+    const amount = Number(
+      movement.amount,
+    );
 
     if (movement.type === "income") {
       current.income += amount;
@@ -273,22 +389,22 @@ export async function getCashFlow(
       current.expense += amount;
     }
 
-    grouped.set(month, current);
+    grouped.set(
+      month,
+      current,
+    );
   }
 
-  return Array.from(grouped.entries()).map(
+  return Array.from(
+    grouped.entries(),
+  ).map(
     ([month, values]) => ({
       date: `${month}-01`,
       income: values.income,
       expense: values.expense,
-      balance: values.income - values.expense,
+      balance:
+        values.income -
+        values.expense,
     }),
   );
-}
-
-export interface TransferFinanceAccountInput {
-  sourceAccountId: string;
-  destinationAccountId: string;
-  amount: number;
-  description?: string;
 }

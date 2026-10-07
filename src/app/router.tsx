@@ -21,7 +21,6 @@ import { OrderCreate } from "@/pages/orders/OrderCreate";
 
 import { Customers } from "@/pages/customers/Customers";
 import { CustomerCreate } from "@/pages/customers/CustomerCreate";
-
 import { CustomerEdit } from "@/pages/customers/CustomerEdit";
 
 import Reports from "@/pages/reports/Reports";
@@ -29,6 +28,8 @@ import Reports from "@/pages/reports/Reports";
 import { Finance } from "@/pages/finance/Finance";
 
 import Settings from "@/pages/settings/Settings";
+
+import { Users } from "@/pages/users/Users";
 
 export function AppRouter() {
   return (
@@ -190,6 +191,18 @@ export function AppRouter() {
             <ProtectedRoute>
               <AppLayout currentPage="Relatórios">
                 <Reports />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* USUÁRIOS */}
+        <Route
+          path="/users"
+          element={
+            <ProtectedRoute>
+              <AppLayout currentPage="Usuários">
+                <Users />
               </AppLayout>
             </ProtectedRoute>
           }

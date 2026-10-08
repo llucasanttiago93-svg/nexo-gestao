@@ -3,36 +3,42 @@ import { supabase } from "@/lib/supabase";
 import type {
   OrganizationUser,
   UserRole,
+  UserRoleSlug,
 } from "../users.types";
+
+interface RoleRow {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  is_system: boolean;
+}
 
 interface OrganizationMemberRow {
   user_id: string;
   organization_id: string;
   role_id: string;
   created_at: string;
-
-  role: {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  is_system: boolean;
-}[];
+  role: RoleRow | RoleRow[] | null;
 }
 
 function mapOrganizationUser(
   row: OrganizationMemberRow,
 ): OrganizationUser {
-  const roleRow = row.role[0];
+  const roleRow = Array.isArray(row.role)
+    ? row.role[0]
+    : row.role;
 
   if (!roleRow) {
-    throw new Error("O usuário não possui um papel válido.");
+    throw new Error(
+      "O usuário não possui um papel válido.",
+    );
   }
 
   const role: UserRole = {
     id: roleRow.id,
     name: roleRow.name,
-    slug: roleRow.slug as UserRole["slug"],
+    slug: roleRow.slug as UserRoleSlug,
     description: roleRow.description,
     isSystem: roleRow.is_system,
   };
@@ -73,5 +79,10 @@ export async function getCurrentOrganizationUsers(
     throw error;
   }
 
-  return (data ?? []).map(mapOrganizationUser);
+  return (data ?? []).map(
+    (row) =>
+      mapOrganizationUser(
+        row as unknown as OrganizationMemberRow,
+      ),
+  );
 }

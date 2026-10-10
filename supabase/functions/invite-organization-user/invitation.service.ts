@@ -30,11 +30,19 @@ export async function createOrganizationInvitation({
         .maybeSingle();
 
     if (roleError || !role) {
-        return {
-            success: false,
-            error: "O papel selecionado não foi encontrado.",
-        };
-    }
+    console.error("Falha ao consultar papel:", {
+        roleId,
+        roleError,
+        roleFound: Boolean(role),
+    });
+
+    return {
+        success: false,
+        error: roleError
+            ? `Erro ao consultar papel: ${roleError.message}`
+            : `Papel não encontrado para o ID: ${roleId}`,
+    };
+}
 
     if (role.slug === "owner") {
         return {

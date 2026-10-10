@@ -15,7 +15,7 @@ export default {
     }
 
     try {
-      const userId = ctx.userClaims.sub;
+      const userId = ctx.userClaims?.id;
 
       if (!userId) {
         return Response.json(

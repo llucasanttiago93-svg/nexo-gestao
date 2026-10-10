@@ -1,11 +1,16 @@
-import { useState } from "react";
+
+import { useState, type FormEvent } from "react";
 import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import {
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 
 import { useAuth } from "@/features/auth/AuthContext";
 
 export function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp } = useAuth();
 
   const [mode, setMode] = useState<"login" | "signup">("login");
@@ -19,9 +24,7 @@ export function Login() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  async function handleSubmit(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     setErrorMessage("");
@@ -31,25 +34,28 @@ export function Login() {
     try {
       if (mode === "login") {
         await signIn(email, password);
-        navigate("/dashboard", { replace: true });
+
+        const returnTo = searchParams.get("returnTo");
+
+        // Aceita somente caminhos internos da aplicação.
+        const safeReturnTo =
+          returnTo?.startsWith("/") && !returnTo.startsWith("//")
+            ? returnTo
+            : null;
+
+        navigate(safeReturnTo ?? "/dashboard", {
+          replace: true,
+        });
       } else {
         if (name.trim().length < 2) {
-          throw new Error(
-            "Informe seu nome completo.",
-          );
+          throw new Error("Informe seu nome completo.");
         }
 
         if (password.length < 6) {
-          throw new Error(
-            "A senha deve ter pelo menos 6 caracteres.",
-          );
+          throw new Error("A senha deve ter pelo menos 6 caracteres.");
         }
 
-        await signUp(
-          email,
-          password,
-          name.trim(),
-        );
+        await signUp(email, password, name.trim());
 
         setSuccessMessage(
           "Conta criada com sucesso. Você já pode entrar.",
@@ -89,10 +95,7 @@ export function Login() {
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-5"
-          >
+          <form onSubmit={handleSubmit} className="space-y-5">
             {mode === "signup" && (
               <div>
                 <label
@@ -106,11 +109,10 @@ export function Login() {
                   id="name"
                   type="text"
                   value={name}
-                  onChange={(event) =>
-                    setName(event.target.value)
-                  }
+                  onChange={(event) => setName(event.target.value)}
                   placeholder="Seu nome"
                   autoComplete="name"
+                  required
                   className={inputClass}
                 />
               </div>
@@ -134,9 +136,7 @@ export function Login() {
                   id="email"
                   type="email"
                   value={email}
-                  onChange={(event) =>
-                    setEmail(event.target.value)
-                  }
+                  onChange={(event) => setEmail(event.target.value)}
                   placeholder="seu@email.com"
                   autoComplete="email"
                   required
@@ -161,15 +161,9 @@ export function Login() {
 
                 <input
                   id="password"
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
+                  type={showPassword ? "text" : "password"}
                   value={password}
-                  onChange={(event) =>
-                    setPassword(event.target.value)
-                  }
+                  onChange={(event) => setPassword(event.target.value)}
                   placeholder="••••••••"
                   autoComplete={
                     mode === "login"
@@ -183,14 +177,10 @@ export function Login() {
                 <button
                   type="button"
                   onClick={() =>
-                    setShowPassword(
-                      (current) => !current,
-                    )
+                    setShowPassword((current) => !current)
                   }
                   aria-label={
-                    showPassword
-                      ? "Ocultar senha"
-                      : "Mostrar senha"
+                    showPassword ? "Ocultar senha" : "Mostrar senha"
                   }
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
                 >
@@ -210,13 +200,19 @@ export function Login() {
             </div>
 
             {errorMessage && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm leading-5 text-red-700">
+              <div
+                role="alert"
+                className="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm leading-5 text-red-700"
+              >
                 {errorMessage}
               </div>
             )}
 
             {successMessage && (
-              <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-sm leading-5 text-green-700">
+              <div
+                role="status"
+                className="rounded-lg border border-green-200 bg-green-50 px-3 py-2.5 text-sm leading-5 text-green-700"
+              >
                 {successMessage}
               </div>
             )}
@@ -244,10 +240,8 @@ export function Login() {
             <button
               type="button"
               onClick={() => {
-                setMode(
-                  mode === "login"
-                    ? "signup"
-                    : "login",
+                setMode((current) =>
+                  current === "login" ? "signup" : "login",
                 );
                 setErrorMessage("");
                 setSuccessMessage("");
@@ -275,21 +269,15 @@ const inputClass =
 function translateAuthError(message: string) {
   const normalized = message.toLowerCase();
 
-  if (
-    normalized.includes("invalid login credentials")
-  ) {
+  if (normalized.includes("invalid login credentials")) {
     return "E-mail ou senha incorretos.";
   }
 
-  if (
-    normalized.includes("user already registered")
-  ) {
+  if (normalized.includes("user already registered")) {
     return "Este e-mail já possui uma conta.";
   }
 
-  if (
-    normalized.includes("email not confirmed")
-  ) {
+  if (normalized.includes("email not confirmed")) {
     return "Confirme seu e-mail antes de entrar.";
   }
 

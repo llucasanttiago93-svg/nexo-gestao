@@ -1,11 +1,14 @@
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useNavigate } from "react-router-dom";
 import {
+  ArrowRight,
   Building2,
   MapPin,
-  Settings2,
   Save,
+  Settings2,
+  UsersRound,
 } from "lucide-react";
 
 import Button from "@/components/ui/Button";
@@ -49,6 +52,8 @@ const preferencesDefaultValues: CompanyPreferencesSchema = {
 };
 
 const Settings = () => {
+  const navigate = useNavigate();
+
   const companyProfileQuery = useCompanyProfileQuery();
   const companyPreferencesQuery = useCompanyPreferencesQuery();
 
@@ -414,11 +419,10 @@ const Settings = () => {
                 <select
                   id="currency"
                   {...registerPreferences("currency")}
-                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100 ${
-                    preferenceErrors.currency
+                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100 ${preferenceErrors.currency
                       ? "border-red-500"
                       : "border-gray-300"
-                  }`}
+                    }`}
                 >
                   <option value="BRL">
                     Real brasileiro (R$)
@@ -452,11 +456,10 @@ const Settings = () => {
                 <select
                   id="date_format"
                   {...registerPreferences("date_format")}
-                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100 ${
-                    preferenceErrors.date_format
+                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100 ${preferenceErrors.date_format
                       ? "border-red-500"
                       : "border-gray-300"
-                  }`}
+                    }`}
                 >
                   <option value="DD/MM/YYYY">
                     DD/MM/AAAA
@@ -490,11 +493,10 @@ const Settings = () => {
                 <select
                   id="timezone"
                   {...registerPreferences("timezone")}
-                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100 ${
-                    preferenceErrors.timezone
+                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100 ${preferenceErrors.timezone
                       ? "border-red-500"
                       : "border-gray-300"
-                  }`}
+                    }`}
                 >
                   <option value="America/Sao_Paulo">
                     São Paulo (GMT-3)
@@ -536,11 +538,10 @@ const Settings = () => {
                 <select
                   id="default_page"
                   {...registerPreferences("default_page")}
-                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100 ${
-                    preferenceErrors.default_page
+                  className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-100 ${preferenceErrors.default_page
                       ? "border-red-500"
                       : "border-gray-300"
-                  }`}
+                    }`}
                 >
                   <option value="/dashboard">
                     Dashboard
@@ -589,7 +590,7 @@ const Settings = () => {
                   <p className="mr-auto text-sm text-green-600">
                     Preferências salvas com sucesso.
                   </p>
-              )}
+                )}
 
               <Button
                 type="submit"
@@ -607,6 +608,45 @@ const Settings = () => {
           </div>
         </Card>
       </form>
+
+
+      {/* Usuários e permissões */}
+      <Card
+        title="Usuários e permissões"
+        description="Gerencie quem tem acesso à sua organização e quais ações cada pessoa pode realizar."
+      >
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+              <UsersRound
+                size={20}
+                className="text-gray-700"
+              />
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">
+                Acesso à organização
+              </h3>
+
+              <p className="mt-1 max-w-xl text-sm leading-6 text-gray-500">
+                Convide colaboradores, consulte os usuários da empresa
+                e gerencie seus perfis de acesso.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate("/users")}
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 sm:w-auto"
+          >
+            Gerenciar usuários
+            <ArrowRight size={16} />
+          </button>
+        </div>
+      </Card>
+
     </div>
   );
 };

@@ -1,8 +1,14 @@
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import {
   updateOrganizationMemberRole,
 } from "./services/users.write.service";
+
+import {
+  inviteOrganizationUser,
+  type InviteOrganizationUserInput,
+} from "./services/users.invitation.service";
 
 import { usersQueryKeys } from "./users.queries";
 
@@ -34,5 +40,12 @@ export function useUpdateUserRole() {
         ),
       });
     },
+  });
+}
+
+export function useInviteOrganizationUser() {
+  return useMutation({
+    mutationFn: (input: InviteOrganizationUserInput) =>
+      inviteOrganizationUser(input),
   });
 }

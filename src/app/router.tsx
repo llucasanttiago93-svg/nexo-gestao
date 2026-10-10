@@ -15,6 +15,8 @@ import { Products } from "@/pages/products/Products";
 import { ProductCreate } from "@/pages/products/ProductCreate";
 import { ProductEdit } from "@/pages/products/ProductEdit";
 
+import { AcceptInvitation } from "@/pages/auth/AcceptInvitation";
+
 import { Orders } from "@/pages/orders/Orders";
 import { OrderDetails } from "@/pages/orders/OrderDetails";
 import { OrderCreate } from "@/pages/orders/OrderCreate";
@@ -39,6 +41,11 @@ export function AppRouter() {
         <Route
           path="/login"
           element={<Login />}
+        />
+
+        <Route
+          path="/accept-invitation"
+          element={<AcceptInvitation />}
         />
 
         {/* REDIRECIONAMENTO INICIAL */}

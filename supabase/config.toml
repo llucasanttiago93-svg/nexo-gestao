@@ -1,0 +1,6 @@
+[functions.invite-organization-user]
+enabled = true
+verify_jwt = false
+import_map = "./functions/invite-organization-user/deno.json"
+entrypoint = "./functions/invite-organization-user/index.ts"
+# static_files = [ "./functions/invite-organization-user/*.html" ]

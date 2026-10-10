@@ -38,3 +38,6 @@ Thumbs.db
 
 # Sensitive local files
 senha banco de dados.txt
+
+# Supabase temporary files
+supabase/.temp/

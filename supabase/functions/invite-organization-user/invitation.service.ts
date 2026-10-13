@@ -15,6 +15,23 @@ interface ServiceResult {
     error?: string;
 }
 
+const { data: roleTest, error: roleTestError } =
+  await ctx.supabaseAdmin
+    .from("roles")
+    .select("id")
+    .limit(1);
+
+console.log("Teste de leitura administrativa:", {
+  success: !roleTestError,
+  rows: roleTest?.length ?? null,
+  error: roleTestError
+    ? {
+        code: roleTestError.code,
+        message: roleTestError.message,
+      }
+    : null,
+});
+
 export async function createOrganizationInvitation({
     supabaseAdmin,
     organizationId,

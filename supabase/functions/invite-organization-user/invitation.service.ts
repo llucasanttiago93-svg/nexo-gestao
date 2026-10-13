@@ -16,7 +16,7 @@ interface ServiceResult {
 }
 
 const { data: roleTest, error: roleTestError } =
-  await ctx.supabaseAdmin
+  await supabaseAdmin
     .from("roles")
     .select("id")
     .limit(1);
